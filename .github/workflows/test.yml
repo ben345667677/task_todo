@@ -32,7 +32,10 @@ jobs:
       if: success()
       run: |
         echo "🏗️ Building Task TODO App Docker image..."
-        docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/task-todo-app:latest .
+        ls -la
+        echo "📁 Current directory contents shown above"
+        
+        docker build --tag ${{ secrets.DOCKER_HUB_USERNAME }}/task-todo-app:latest --file Dockerfile .
         
         echo "📤 Pushing to Docker Hub..."
         docker push ${{ secrets.DOCKER_HUB_USERNAME }}/task-todo-app:latest
