@@ -28,20 +28,13 @@ jobs:
         echo "✅ Logging in to Docker Hub..."
         echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
     
-    - name: Build and Push Task TODO App Image
+    - name: Build and Push
       if: success()
       run: |
-        echo "🏗️ Building Task TODO App Docker image..."
         ls -la
-        echo "📁 Current directory contents shown above"
-        
-        docker build --tag ${{ secrets.DOCKER_HUB_USERNAME }}/task-todo-app:latest --file Dockerfile .
-        
-        echo "📤 Pushing to Docker Hub..."
+        docker buildx build -t ${{ secrets.DOCKER_HUB_USERNAME }}/task-todo-app:latest --load .
         docker push ${{ secrets.DOCKER_HUB_USERNAME }}/task-todo-app:latest
-        
-        echo "✅ Task TODO App successfully pushed to Docker Hub!"
-        echo "📍 Image available at: docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/task-todo-app:latest"
+        echo "✅ DONE"
     
     - name: Verify Docker Push Success
       if: success()
