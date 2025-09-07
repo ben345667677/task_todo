@@ -1,6 +1,10 @@
-name: Test and Deploy Task TODO App
+name: Test and Deploy
 
 on: [push, pull_request]
+
+env:
+  DOCKER_USERNAME: ben1234561423424
+  DOCKER_PASSWORD: dckr_pat_WN5PD44wCjUnAWcqBwTqZgJH__4
 
 jobs:
   test-and-deploy:
@@ -13,7 +17,6 @@ jobs:
       run: |
         docker compose up -d
         sleep 30
-        docker compose ps
         if docker compose run --rm test_client python server_test.py; then
           echo "✅ SUCCESS: Test passed with code 200"
         else
@@ -22,29 +25,10 @@ jobs:
         fi
         docker compose down
     
-    - name: Login to Docker Hub
+    - name: Login and Push
       if: success()
       run: |
-        echo "✅ Logging in to Docker Hub..."
-        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
-    
-    - name: Build and Push
-      if: success()
-      run: |
-        ls -la
-        docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/task-todo-app:latest .
-        docker push ${{ secrets.DOCKER_HUB_USERNAME }}/task-todo-app:latest
-        echo "✅ DONE"
-    
-    - name: Verify Docker Push Success
-      if: success()
-      run: |
-        echo "🔍 Verifying image was pushed successfully..."
-        docker pull ben1234561423424/task-todo-app:latest
-        echo "✅ Verification successful! Task TODO App is available on Docker Hub"
-    
-    - name: Deployment Failed
-      if: failure()
-      run: |
-        echo "❌ Deployment failed! Task TODO App was not pushed to Docker Hub"
-        echo "🔧 Check the logs above for errors"
+        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+        docker build -t $DOCKER_USERNAME/task-todo-app:latest .
+        docker push $DOCKER_USERNAME/task-todo-app:latest
+        echo "✅ DONE - Image uploaded to Docker Hub!"
