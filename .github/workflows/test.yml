@@ -11,9 +11,16 @@ jobs:
     
     - name: Run Test
       run: |
-        docker-compose up -d
-        docker-compose run --rm test_client python server_test.py
-        docker-compose down
+        docker compose up -d
+        sleep 30
+        docker compose ps
+        if docker compose run --rm test_client python server_test.py; then
+          echo "✅ SUCCESS: Test passed with code 200"
+        else
+          echo "❌ FAILED: Test failed - no code 200"
+          exit 1
+        fi
+        docker compose down
     
     - name: Login to Docker Hub
       if: success()
