@@ -32,7 +32,7 @@ jobs:
       if: success()
       run: |
         ls -la
-        docker buildx build -t ${{ secrets.DOCKER_HUB_USERNAME }}/task-todo-app:latest --load .
+        docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/task-todo-app:latest .
         docker push ${{ secrets.DOCKER_HUB_USERNAME }}/task-todo-app:latest
         echo "✅ DONE"
     
