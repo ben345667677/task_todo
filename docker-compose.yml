@@ -52,10 +52,28 @@ services:
     depends_on:
       - app
     links:
-      - app   
+      - app 
+
+
+  phpmyadmin:
+    container_name: phpmyadmin
+    image: phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: flask_mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: password
+    depends_on:
+      - mysql
+    links:
+      - mysql      
  
 # volumes definition here
 volumes:
+
   # just a persistance data
   mysql-data:
     driver: local

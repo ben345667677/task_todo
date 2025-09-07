@@ -14,19 +14,19 @@ def test_flask_app():
         # בדיקה 2: הוספת משימה
         print("מוסיף משימה...")
         url = "http://flask_app:5000/add"
-        data = {"title": "משימה חדשה"}
+        data = {"title": "new task"}
         response = requests.post(url, data=data)
-        print(f"הוספת משימה: {response.status_code}")
+        print(f" new task: {response.status_code}")
         
         # בדיקה 3: משימה שנייה
-        data2 = {"title": "משימה חדשה מהלקוח"}
+        data2 = {"title": "new task"}
         response2 = requests.post(url, data=data2)
-        print(f"משימה שנייה: {response2.status_code}")
+        print(f"second task: {response2.status_code}")
         
-        print("✅ הטסטים הושלמו!")
+        print("✅ the tests are done!")
         
     except Exception as e:
-        print(f"❌ שגיאה בטסט: {e}")
+        print(f"❌ error in test: {e}")
 
 if __name__ == "__main__":
     test_flask_app()
