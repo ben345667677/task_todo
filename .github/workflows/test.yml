@@ -26,19 +26,19 @@ jobs:
       if: success()
       run: |
         echo "✅ Logging in to Docker Hub..."
-        echo "dckr_pat_WN5PD44wCjUnAWcqBwTqZgJH__4" | docker login -u "ben1234561423424" --password-stdin
+        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
     
     - name: Build and Push Task TODO App Image
       if: success()
       run: |
         echo "🏗️ Building Task TODO App Docker image..."
-        docker build -t ben1234561423424/task-todo-app:latest .
+        docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/task-todo-app:latest .
         
         echo "📤 Pushing to Docker Hub..."
-        docker push ben1234561423424/task-todo-app:latest
+        docker push ${{ secrets.DOCKER_HUB_USERNAME }}/task-todo-app:latest
         
         echo "✅ Task TODO App successfully pushed to Docker Hub!"
-        echo "📍 Image available at: docker.io/ben1234561423424/task-todo-app:latest"
+        echo "📍 Image available at: docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/task-todo-app:latest"
     
     - name: Verify Docker Push Success
       if: success()
