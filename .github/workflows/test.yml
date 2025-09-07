@@ -1,4 +1,4 @@
-name: Test and Deploy
+name: Test and Deploy Task TODO App
 
 on: [push, pull_request]
 
@@ -22,8 +22,27 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
     
-    - name: Build and Push Flask Image
+    - name: Build and Push Task TODO App Image
       if: success()
       run: |
-        docker build -t ${{ secrets.DOCKER_USERNAME }}/flask-todo:latest .
-        docker push ${{ secrets.DOCKER_USERNAME }}/flask-todo:latest
+        echo "🏗️ Building Task TODO App Docker image..."
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/task-todo-app:latest .
+        
+        echo "📤 Pushing to Docker Hub..."
+        docker push ${{ secrets.DOCKER_USERNAME }}/task-todo-app:latest
+        
+        echo "✅ Task TODO App successfully pushed to Docker Hub!"
+        echo "📍 Image available at: docker.io/${{ secrets.DOCKER_USERNAME }}/task-todo-app:latest"
+    
+    - name: Verify Docker Push Success
+      if: success()
+      run: |
+        echo "🔍 Verifying image was pushed successfully..."
+        docker pull ${{ secrets.DOCKER_USERNAME }}/task-todo-app:latest
+        echo "✅ Verification successful! Task TODO App is available on Docker Hub"
+    
+    - name: Deployment Failed
+      if: failure()
+      run: |
+        echo "❌ Deployment failed! Task TODO App was not pushed to Docker Hub"
+        echo "🔧 Check the logs above for errors"
