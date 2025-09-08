@@ -21,7 +21,7 @@ wew
 - **Frontend**: HTML + CSS + Jinja2
 - **Containerization**: Docker + Docker Compose
 - **CI/CD**: GitHub Actions
-- **Testing**: Python requests
+- **Testing**: Python requestsדגד
 
 ## 🏃‍♂️ הרצה מהירה
 
