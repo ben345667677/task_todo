@@ -8,20 +8,16 @@
 - ✏️ עדכון סטטוס משימות (הושלם/לא הושלם)
 - 🗑️ מחיקת משימות
 - 🎨 ממשק משתמש נקי ופשוט
-- 🐳 תמsddיכה מלאה ב-Docker
+- 🐳 תמיכה מלאה ב-Docker
 
 ## 🛠️ טכנולוגיות
-<<<<<<< HEAD
-IUUIUI
-=======
-wew
->>>>>>> f986011 (sdsds)
+
 - **Backend**: Flask + SQLAlchemy
 - **Database**: MySQL
 - **Frontend**: HTML + CSS + Jinja2
 - **Containerization**: Docker + Docker Compose
 - **CI/CD**: GitHub Actions
-- **Testing**: Python requestsדגד
+- **Testing**: Python requests
 
 ## 🏃‍♂️ הרצה מהירה
 
