@@ -68,16 +68,25 @@ jobs:
         echo "$AWS_KEY" > ~/.ssh/aws_key
         chmod 600 ~/.ssh/aws_key
         
+        # בדיקת המפתח
+        echo "🔍 Checking SSH key format..."
+        head -1 ~/.ssh/aws_key
+        echo "Key length: $(wc -c < ~/.ssh/aws_key) characters"
+        
         # הוספת AWS host ל-known hosts
         ssh-keyscan -H $AWS_HOST >> ~/.ssh/known_hosts
         
+        # בדיקת חיבור SSH
+        echo "🔍 Testing SSH connection..."
+        ssh -i ~/.ssh/aws_key -o ConnectTimeout=10 -o StrictHostKeyChecking=no $AWS_USER@$AWS_HOST "echo 'SSH connection successful'"
+        
         # העברת קובץ הזיפ ל-AWS
         echo "📤 Uploading zip file to AWS..."
-        scp -i ~/.ssh/aws_key $ZIP_NAME $AWS_USER@$AWS_HOST:~/
+        scp -i ~/.ssh/aws_key -o StrictHostKeyChecking=no $ZIP_NAME $AWS_USER@$AWS_HOST:~/
         
         # חיבור ל-AWS וביצוע הפריסה
         echo "🔧 Connecting to AWS and deploying..."
-        ssh -i ~/.ssh/aws_key $AWS_USER@$AWS_HOST << 'ENDSSH'
+        ssh -i ~/.ssh/aws_key -o StrictHostKeyChecking=no $AWS_USER@$AWS_HOST << 'ENDSSH'
             set -e
             
             echo "📁 Checking for 'web' directory..."
