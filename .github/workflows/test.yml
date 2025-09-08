@@ -3,8 +3,8 @@ name: Test and Deploy
 on: [push, pull_request]
 
 env:
-  DOCKER_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
-  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+  DOCKER_USERNAME: ben1234561423424
+  DOCKER_PASSWORD: dckr_pat_WN5PD44wCjUnAWcqBwTqZgJH__4
 
 jobs:
   test-and-deploy:
@@ -63,7 +63,7 @@ jobs:
         
         # בניה ודחיפה עם docker build רגיל
         echo "Building Docker images..."
-        docker build --tag $DOCKER_USERNAME/task-todo-app:$VERSION .
+        docker build -t $DOCKER_USERNAME/task-todo-app:$VERSION .
         docker tag $DOCKER_USERNAME/task-todo-app:$VERSION $DOCKER_USERNAME/task-todo-app:latest
         
         echo "Pushing images to Docker Hub..."
