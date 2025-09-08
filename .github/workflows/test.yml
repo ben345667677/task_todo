@@ -65,7 +65,9 @@ jobs:
         # שמירת מפתח SSH זמני
         echo "🔑 Setting up SSH key..."
         mkdir -p ~/.ssh
-        echo "$AWS_KEY" > ~/.ssh/aws_key
+        
+        # שמירת המפתח עם קידוד נכון
+        printf '%s\n' "$AWS_KEY" > ~/.ssh/aws_key
         chmod 600 ~/.ssh/aws_key
         
         # בדיקת המפתח
@@ -73,12 +75,33 @@ jobs:
         head -1 ~/.ssh/aws_key
         echo "Key length: $(wc -c < ~/.ssh/aws_key) characters"
         
+        # בדיקת תקינות המפתח
+        echo "🔍 Validating SSH key..."
+        ssh-keygen -l -f ~/.ssh/aws_key || echo "Key validation failed"
+        
+        # בדיקת סוג המפתח
+        echo "🔍 Key type check..."
+        if grep -q "BEGIN RSA PRIVATE KEY" ~/.ssh/aws_key; then
+            echo "✅ RSA Private Key detected"
+        elif grep -q "BEGIN PRIVATE KEY" ~/.ssh/aws_key; then
+            echo "✅ OpenSSH Private Key detected"
+        else
+            echo "❌ Unknown key type"
+        fi
+        
         # הוספת AWS host ל-known hosts
         ssh-keyscan -H $AWS_HOST >> ~/.ssh/known_hosts
         
         # בדיקת חיבור SSH
         echo "🔍 Testing SSH connection..."
-        ssh -i ~/.ssh/aws_key -o ConnectTimeout=10 -o StrictHostKeyChecking=no $AWS_USER@$AWS_HOST "echo 'SSH connection successful'"
+        ssh -i ~/.ssh/aws_key -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $AWS_USER@$AWS_HOST "echo 'SSH connection successful'" || {
+            echo "❌ SSH connection failed. Checking key details..."
+            echo "Key file exists: $(ls -la ~/.ssh/aws_key)"
+            echo "Key permissions: $(stat -c '%a' ~/.ssh/aws_key)"
+            echo "First few lines of key:"
+            head -3 ~/.ssh/aws_key
+            exit 1
+        }
         
         # העברת קובץ הזיפ ל-AWS
         echo "📤 Uploading zip file to AWS..."
