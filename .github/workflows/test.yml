@@ -49,9 +49,9 @@ jobs:
         echo "Cleaning up Docker services..."
         docker compose down
     
-      - name: Deploy to AWS EC2
-        if: success()
-        timeout-minutes: 15
+    - name: Deploy to AWS EC2
+      if: success()
+      timeout-minutes: 15
       run: |
         set -e  # יציאה בשגיאה
         
