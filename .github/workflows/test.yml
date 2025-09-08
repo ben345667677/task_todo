@@ -1,140 +1,76 @@
-name: Test and Deploy to AWS
+name: Compose Test
 
-on: [push, pull_request]
-
-env:
-  AWS_HOST: ec2-13-218-113-24.compute-1.amazonaws.com
-  AWS_USER: ec2-user
-  AWS_KEY: ${{ secrets.AWS_PEM }}
+on: [push]
 
 jobs:
-  test-and-deploy:
+  test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    
+    timeout-minutes: 20
+    env:
+      AWS_HOST: ec2-13-218-113-24.compute-1.amazonaws.com
+      AWS_USER: ec2-user
+      AWS_KEY: ${{ secrets.AWS_PEM }}
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Run Test
-      timeout-minutes: 15
-      run: |
-        set -e
-        
-        echo "Starting Docker services..."
-        docker compose up -d
-        
-        echo "Waiting for services to be ready..."
-        sleep 30
-        
-        echo "Running tests..."
-        if TEST_OUTPUT=$(docker compose run --rm test_client python server_test.py 2>&1); then
-          echo "Test command executed successfully"
-          echo "Test output: $TEST_OUTPUT"
-          
-          if echo "$TEST_OUTPUT" | grep -q "^0$"; then
-            echo "✅ SUCCESS: Test passed - output contains 0"
-          else
-            echo "❌ FAILED: Test failed - output is '$TEST_OUTPUT' (expected 0)"
-            docker compose down
-            exit 1
-          fi
-        else
-          echo "❌ FAILED: Test command failed to execute"
-          docker compose down
-          exit 1
-        fi
-        
-        echo "Cleaning up Docker services..."
-        docker compose down
-    
-    - name: Deploy to AWS EC2
-      if: success()
-      timeout-minutes: 15
-      run: |
-        set -e
-        
-        echo "🚀 Starting AWS deployment..."
-        
-        # יצירת קובץ זיפ
-        ZIP_NAME="task_todo_$(date +%Y%m%d_%H%M%S).zip"
-        echo "📦 Creating zip file: $ZIP_NAME"
-        zip -r $ZIP_NAME . -x "venv/*" "__pycache__/*" "*.pyc" "*.pyo" ".git/*" ".gitignore"
-        
-        # שמירת מפתח SSH
-        echo "🔑 Setting up SSH key..."
-        mkdir -p ~/.ssh
-        echo "${AWS_KEY}" | tr -d '\r' > ~/.ssh/aws_key
-        chmod 600 ~/.ssh/aws_key
-        
-        # בדיקת חיבור בסיסי
-        echo "🔍 Testing connectivity..."
-        nc -vz $AWS_HOST 22 || {
-            echo "❌ Port 22 not accessible"
-            exit 1
-        }
-        
-        # בדיקת ping (לא חוסם)
-        echo "Testing ping (optional)..."
-        ping -c 3 $AWS_HOST || echo "⚠️ Ping failed (expected if ICMP blocked by AWS)" || true
-        
-        # הוספת host ל-known hosts
-        ssh-keyscan -H $AWS_HOST >> ~/.ssh/known_hosts
-        
-        # בדיקת SSH
-        echo "🔍 Testing SSH connection..."
-        if ssh -i ~/.ssh/aws_key -o ConnectTimeout=10 -o StrictHostKeyChecking=no $AWS_USER@$AWS_HOST "echo 'SSH OK' && uname -a"; then
-            echo "✅ SSH connection successful!"
-        else
-            echo "❌ SSH failed with $AWS_USER, trying ubuntu..."
-            if ssh -i ~/.ssh/aws_key -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$AWS_HOST "echo 'SSH OK with ubuntu' && uname -a"; then
-                echo "✅ SSH works with ubuntu user"
-                export AWS_USER=ubuntu
-            else
-                echo "❌ SSH failed with both users"
-                echo "Check: Security Group, instance status, private key"
-                exit 1
+      - uses: actions/checkout@v4
+
+      - name: Start Docker Compose
+        run: |
+          docker compose down --remove-orphans || true
+          docker compose up -d --build
+
+      - name: Check test_client logs for result
+        shell: bash
+        run: |
+          set -e
+          for i in $(seq 1 120); do
+            LAST=$(docker compose logs --no-color test_client | tail -n 1 | tr -d '\r' || true)
+            if [ "$LAST" = "0" ]; then
+              exit 0
+            elif [ "$LAST" = "1" ]; then
+              exit 1
             fi
-        fi
-        
-        # העברת קבצים
-        echo "📤 Uploading files..."
-        scp -i ~/.ssh/aws_key -o StrictHostKeyChecking=no $ZIP_NAME $AWS_USER@$AWS_HOST:~/
-        
-        # פריסה
-        echo "🔧 Deploying to AWS..."
-        ssh -i ~/.ssh/aws_key -o StrictHostKeyChecking=no $AWS_USER@$AWS_HOST << ENDSSH
-            set -e
-            
-            echo "📁 Setting up web directory..."
-            mkdir -p web
-            cd web
-            
-            echo "🗑️ Cleaning up..."
-            rm -rf * .* 2>/dev/null || true
-            
-            echo "📦 Extracting files..."
-            unzip -q ~/$ZIP_NAME
-            rm ~/$ZIP_NAME
-            
-            echo "🐳 Setting up Docker..."
-            sudo usermod -aG docker $USER || true
-            sudo systemctl start docker || true
-            sudo systemctl enable docker || true
-            
-            echo "🐳 Running docker compose..."
-            sudo docker compose down --remove-orphans 2>/dev/null || true
-            sudo docker compose up -d --build --force-recreate
-            
-            echo "📊 Container status:"
-            sudo docker compose ps
-            
-            echo "✅ Deployment completed!"
-            echo "🌐 App available at: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):5000"
-        ENDSSH
-        
-        # ניקוי
-        echo "🧹 Cleaning up..."
-        rm $ZIP_NAME
-        rm ~/.ssh/aws_key
-        
-        echo "🎉 Deployment successful!"
+            sleep 2
+          done
+          exit 1
+
+      - name: Inline Deploy (runs only on success)
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s' "$AWS_KEY" | tr -d '\r' > ~/.ssh/aws_key
+          chmod 600 ~/.ssh/aws_key
+          ssh-keyscan -H "$AWS_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          # Ensure remote web directory exists before copying
+          ssh -i ~/.ssh/aws_key "$AWS_USER@$AWS_HOST" "mkdir -p /home/ec2-user/web"
+
+          ZIP_NAME="project_$(date +%Y%m%d_%H%M%S).zip"
+          zip -qr "$ZIP_NAME" . \
+            -x "venv/*" "__pycache__/*" "*.pyc" "*.pyo" \
+               ".git/*" ".github/*" "node_modules/*"
+
+          scp -i ~/.ssh/aws_key "$ZIP_NAME" "$AWS_USER@$AWS_HOST:/home/ec2-user/web/"
+
+          ssh -i ~/.ssh/aws_key "$AWS_USER@$AWS_HOST" bash -s <<'EOSSH'
+          set -euo pipefail
+          WEB_DIR=/home/ec2-user/web
+          ZIP_FILE=$(ls -t "$WEB_DIR"/project_*.zip | head -1)
+          cd "$WEB_DIR"
+          unzip -oq "$ZIP_FILE"
+          rm -f "$ZIP_FILE"
+          if command -v docker >/dev/null 2>&1; then
+            if docker compose version >/dev/null 2>&1; then
+              docker compose up -d --build
+            elif command -v docker-compose >/dev/null 2>&1; then
+              docker-compose up -d --build
+            fi
+          fi
+          EOSSH
+
+          rm -f "$ZIP_NAME" ~/.ssh/aws_key
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down --remove-orphans

@@ -1,0 +1,63 @@
+        # בדיקת SSH
+        echo "🔍 Testing SSH connection..."
+        if ssh -i ~/.ssh/aws_key -o ConnectTimeout=10 -o StrictHostKeyChecking=no $AWS_USER@$AWS_HOST "echo 'SSH OK' && uname -a"; then
+            echo "✅ SSH connection successful!"
+        else
+            echo "❌ SSH failed with $AWS_USER"
+            echo "Check: Security Group, instance status, private key"
+            exit 1
+        fi
+        
+        # העברת קבצים
+        echo "📤 Uploading files..."
+        scp -i ~/.ssh/aws_key -o StrictHostKeyChecking=no $ZIP_NAME $AWS_USER@$AWS_HOST:~/
+        
+        # פריסה
+        echo "🔧 Deploying to AWS..."
+        ssh -i ~/.ssh/aws_key -o StrictHostKeyChecking=no $AWS_USER@$AWS_HOST << ENDSSH
+            set -e
+            
+            # Detect package manager (Amazon Linux vs others)
+            if command -v dnf >/dev/null 2>&1; then PM=dnf; elif command -v yum >/dev/null 2>&1; then PM=yum; else PM=unknown; fi
+            
+            echo "📦 Ensuring unzip is installed..."
+            if ! command -v unzip >/dev/null 2>&1; then
+                if [ "$PM" != "unknown" ]; then sudo $PM -y install unzip; fi
+            fi
+            
+            echo "🐳 Ensuring docker is installed and running..."
+            if ! command -v docker >/dev/null 2>&1; then
+                if [ "$PM" != "unknown" ]; then
+                    sudo $PM -y install docker || true
+                fi
+            fi
+            sudo systemctl enable docker || true
+            sudo systemctl start docker || true
+            
+            echo "🔧 Resolving docker compose CLI..."
+            if docker compose version >/dev/null 2>&1; then COMPOSE="docker compose"; elif command -v docker-compose >/dev/null 2>&1; then COMPOSE="docker-compose"; else COMPOSE="docker compose"; fi
+            
+            echo "📁 Setting up web directory..."
+            mkdir -p web
+            cd web
+            
+            echo "🗑️ Cleaning up..."
+            rm -rf * .* 2>/dev/null || true
+            
+            echo "📦 Extracting files..."
+            unzip -q ~/$ZIP_NAME
+            rm ~/$ZIP_NAME
+            
+            echo "🔧 Docker group permissions..."
+            sudo usermod -aG docker $(whoami) || true
+            
+            echo "🚀 Running services with compose..."
+            sudo $COMPOSE down --remove-orphans 2>/dev/null || true
+            sudo $COMPOSE up -d --build --force-recreate
+            
+            echo "📊 Container status:"
+            sudo $COMPOSE ps
+            
+            echo "✅ Deployment completed!"
+            echo "🌐 App available at: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):5000"
+        ENDSSH
