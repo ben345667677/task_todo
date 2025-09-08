@@ -43,8 +43,8 @@ jobs:
           chmod 600 ~/.ssh/aws_key
           ssh-keyscan -H "$AWS_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-          # Ensure remote web directory exists before copying
-          ssh -i ~/.ssh/aws_key "$AWS_USER@$AWS_HOST" "mkdir -p /home/ec2-user/web"
+          # Clean remote home (preserve .ssh), then ensure web directory exists
+          ssh -i ~/.ssh/aws_key "$AWS_USER@$AWS_HOST" 'set -e; if [ -d /home/ec2-user ]; then find /home/ec2-user -mindepth 1 -maxdepth 1 ! -name ".ssh" -exec rm -rf {} +; fi; mkdir -p /home/ec2-user/web'
 
           ZIP_NAME="project_$(date +%Y%m%d_%H%M%S).zip"
           zip -qr "$ZIP_NAME" . \
