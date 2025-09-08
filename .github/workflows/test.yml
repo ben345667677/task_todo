@@ -5,6 +5,36 @@ on: [push, pull_request]
 env:
   DOCKER_USERNAME: ben1234561423424
   DOCKER_PASSWORD: dckr_pat_WN5PD44wCjUnAWcqBwTqZgJH__4
+  SERVER_HOST: 54.175.121.66
+  SERVER_USER: github_vm
+  SSH_PRIVATE_KEY: |
+    -----BEGIN RSA PRIVATE KEY-----
+    MIIEowIBAAKCAQEAx5n4mT1VAltOjOaZq6Af13P2mZ8jo149iN9qlDocDkcTgFLU
+    yzCpmSq+28WgqwtHXiT/ehZgVHIci6Gmn37PLfpiAnsAFt5TIFBHA8lIxf71p+QJ
+    ua3rsNrfccyIRCQLHhsY54IsA6gVkqqU8nnv/QeGq7uMsF8T2kXqJJMtNvvt9rFO
+    TBQQznGpRKhfDgIv+PJQFxKRpv7uUiBkrNtUyULgDZlDJ2zl3Qyuy/Ts6+b/c8Lj
+    Ofsa8b6nbc97kgqUBIQgrMP3SHoJg0Tvrtf54fphAgtqULYvMpnBZgemoUTmAXch
+    PrSFX1l56lFY8+qqOQci7PNo8+GqNkjL0A0Z5QIDAQABAoIBABgIdwFkfB7bhZq7
+    jVc34X2crd2TZsQd7cTUOc39LTGe5z81Of/5LQKPPgnSQuU1Z3NzevtlRFYGo19A
+    qIJdz25WzoRD8R/PxyyF3fcbvlJwv31mnLEpus5BnFPkb6fcuyX110rQxqHuFCLj
+    vSlw+y95P4LgAzGdUROgBXA/9FrBRjOB/8syvhUjgKM8Ng7BQue+XsSwWJwm4nno
+    6VdXBrVsb2ov2EyJjvNnNJnTjmGaX974EzSstPZS7nOB6dsci0pWmyevgAkNduX3
+    Z7PUnZsBj7AJxv6mYhmSIyIE37bGOK+CtQw1c7uFOK4JmuNhZKd1AtubP7XuCjAY
+    piV3xEECgYEA8tKm401xwwXarppjhlpaKD+l+LGPKPR0sE7irYoWjRQB9a1TUjwo
+    deuHEvPGPaVWhS5UQCzpRpxl6+Ch9p+bNWigq2l5m3bqzuiS+QGWqEsywcq2YsE8
+    8TreUKdoGgc0dA5/Xv8B7e+fTvzbnKQfJwW4NC7AJfN+Kf5QcEfhIbUCgYEA0m7g
+    wKrqiwm24H4vZI95IUm4ncLpAfhGOS96uw2axB/zYmQwtU+Ejy+1TGSWGmTfhgEL
+    0Ba1L9GirN+Z5XYSYLBlLX3cCEt+Kn/CKbNPvcNRN+8JRr5fXIeSima0g/OCTTvB
+    RUCfSlrmo6LNM6JJMRgymbmOvOmv9n9x+Y2f9XECgYB9QWhQ7Av4u7ZYRs976HOF
+    O3/Tz1O3npHquGZ5ejezwlRYdHX8f4enfD0K67Cg7/63aHSRPhl/EQIKMK+bVi1r
+    2XK3uQq/xRHOdW4LAGTEnzWpfXWjb2aOUP2IwTIT6w+FpkzRpd1K7UZSKmDmZkqj
+    iHHCiTMY4Id+Be9cW9en2QKBgQC/PdU0RCBzy5hP3V3k3h8PiZgmiASKrb/kKKo5
+    ZNvKcd8XBEbgACxQlOMHUkK4KgSaHElIC9sOYk6dHXkXeH6rMKRC+6cEQteeeA1V
+    KIjHxMIDO1IK4Oh5hxw+e6iCYsOAvVWgQmKBiKsi+8nRqyMpYvxZiLGYLiiktJ44
+    VeWRgQKBgHKBva+zlRSJsgyfqW5T+alImK1JkJpc4iGw6Bv22o1UO8tHv6Cw03Gn
+    VuOBMLU+E9TTOz2KoNgyvZ4vJ6Er6HDU3b5bZhtbJvpNN66J4cW7ggBXABF0NAjr
+    TmLLSZJTLOzQE90Z/1+F5g4uRfWImH6ObwTLhjgng977BQuZQVvR
+    -----END RSA PRIVATE KEY-----
 
 jobs:
   test-and-deploy:
@@ -73,3 +103,54 @@ jobs:
         echo "✅ DONE - Image uploaded to Docker Hub!"
         echo "✅ Version: $VERSION"
         echo "✅ Latest tag also updated"
+    
+    - name: Deploy to Server
+      if: success() && github.ref == 'refs/heads/main'
+      timeout-minutes: 10
+      run: |
+        set -e  # יציאה בשגיאה
+        
+        echo "🚀 Starting deployment to server..."
+        
+        # הגדרת SSH key
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
+        
+        # התחברות לשרת והרצת פקודות deployment
+        ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST << 'EOF'
+        set -e
+        
+        echo "📁 Navigating to project directory..."
+        cd /home/$SERVER_USER/task_todo || {
+          echo "❌ Project directory not found. Cloning repository..."
+          cd /home/$SERVER_USER
+          git clone https://github.com/${{ github.repository }}.git task_todo
+          cd task_todo
+        }
+        
+        echo "🔄 Pulling latest changes..."
+        git fetch origin
+        git reset --hard origin/main
+        
+        echo "🛑 Stopping existing containers..."
+        docker compose down || true
+        
+        echo "🗑️ Cleaning up old images..."
+        docker system prune -f || true
+        
+        echo "🔨 Building and starting services..."
+        docker compose build --no-cache
+        docker compose up -d
+        
+        echo "⏳ Waiting for services to be ready..."
+        sleep 15
+        
+        echo "🔍 Checking service status..."
+        docker compose ps
+        
+        echo "✅ Deployment completed successfully!"
+        EOF
+        
+        echo "🎉 Server deployment finished!"
