@@ -55,29 +55,58 @@ jobs:
       run: |
         set -e  # יציאה בשגיאה
         
-        echo "🚀 Starting AWS deployment..."
+        echo "🚀 Starting AWS deployment with MAXIMUM DEBUG..."
+        echo "🔍 Environment variables:"
+        echo "AWS_HOST: $AWS_HOST"
+        echo "AWS_USER: $AWS_USER"
+        echo "AWS_KEY length: ${#AWS_KEY} characters"
         
         # יצירת קובץ זיפ של הפרויקט
         ZIP_NAME="task_todo_$(date +%Y%m%d_%H%M%S).zip"
         echo "📦 Creating zip file: $ZIP_NAME"
-        zip -r $ZIP_NAME . -x "venv/*" "__pycache__/*" "*.pyc" "*.pyo" ".git/*" ".gitignore"
+        zip -r $ZIP_NAME . -x "venv/*" "__pycache__/*" "*.pyc" "*.pyo" ".git/*" ".gitignore" || {
+            echo "❌ Failed to create zip file"
+            exit 1
+        }
+        echo "✅ Zip file created successfully: $(ls -la $ZIP_NAME)"
         
         # שמירת מפתח SSH זמני
-        echo "🔑 Setting up SSH key..."
+        echo "🔑 Setting up SSH key with maximum debugging..."
         mkdir -p ~/.ssh
+        echo "📁 SSH directory created: $(ls -la ~/.ssh)"
         
-        # שמירת המפתח עם קידוד נכון
-        printf '%s\n' "$AWS_KEY" > ~/.ssh/aws_key
-        chmod 600 ~/.ssh/aws_key
+        # שמירת המפתח עם קידוד נכון (נקי מ-\r)
+        echo "💾 Saving SSH key..."
+        echo "${AWS_KEY}" | tr -d '\r' > ~/.ssh/aws_key || {
+            echo "❌ Failed to save SSH key"
+            exit 1
+        }
+        chmod 600 ~/.ssh/aws_key || {
+            echo "❌ Failed to set SSH key permissions"
+            exit 1
+        }
+        echo "✅ SSH key saved and permissions set"
         
         # בדיקת המפתח
         echo "🔍 Checking SSH key format..."
-        head -1 ~/.ssh/aws_key
-        echo "Key length: $(wc -c < ~/.ssh/aws_key) characters"
+        echo "Key file exists: $(ls -la ~/.ssh/aws_key)"
+        echo "Key permissions: $(stat -c '%a' ~/.ssh/aws_key)"
+        echo "Key size: $(wc -c < ~/.ssh/aws_key) characters"
+        echo "First line: $(head -1 ~/.ssh/aws_key)"
+        echo "Last line: $(tail -1 ~/.ssh/aws_key)"
         
         # בדיקת תקינות המפתח
         echo "🔍 Validating SSH key..."
-        ssh-keygen -l -f ~/.ssh/aws_key || echo "Key validation failed"
+        if ssh-keygen -l -f ~/.ssh/aws_key; then
+            echo "✅ SSH key validation successful"
+        else
+            echo "❌ SSH key validation failed"
+            echo "Key content (first 5 lines):"
+            head -5 ~/.ssh/aws_key
+            echo "Key content (last 5 lines):"
+            tail -5 ~/.ssh/aws_key
+            exit 1
+        fi
         
         # בדיקת סוג המפתח
         echo "🔍 Key type check..."
@@ -86,78 +115,146 @@ jobs:
         elif grep -q "BEGIN PRIVATE KEY" ~/.ssh/aws_key; then
             echo "✅ OpenSSH Private Key detected"
         else
-            echo "❌ Unknown key type"
+            echo "❌ Unknown key type - checking content:"
+            grep -E "BEGIN.*PRIVATE KEY" ~/.ssh/aws_key || echo "No private key markers found"
+            exit 1
+        fi
+        
+        # בדיקת חיבור בסיסי
+        echo "🔍 Testing raw connectivity..."
+        echo "Testing port 22..."
+        if nc -vz $AWS_HOST 22; then
+            echo "✅ Port 22 is accessible"
+        else
+            echo "❌ Port 22 not accessible - checking if host is reachable"
+            if ping -c 3 $AWS_HOST; then
+                echo "✅ Host is reachable but port 22 is closed"
+                echo "🔧 Check Security Group settings for SSH (port 22)"
+            else
+                echo "❌ Host is not reachable"
+                echo "🔧 Check if instance is running and has public IP"
+            fi
+            exit 1
+        fi
+        
+        echo "Testing ping..."
+        if ping -c 3 $AWS_HOST; then
+            echo "✅ Ping successful"
+        else
+            echo "❌ Ping failed"
+            exit 1
         fi
         
         # הוספת AWS host ל-known hosts
-        ssh-keyscan -H $AWS_HOST >> ~/.ssh/known_hosts
-        
-        # בדיקת חיבור SSH
-        echo "🔍 Testing SSH connection..."
-        ssh -i ~/.ssh/aws_key -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $AWS_USER@$AWS_HOST "echo 'SSH connection successful'" || {
-            echo "❌ SSH connection failed. Checking key details..."
-            echo "Key file exists: $(ls -la ~/.ssh/aws_key)"
-            echo "Key permissions: $(stat -c '%a' ~/.ssh/aws_key)"
-            echo "First few lines of key:"
-            head -3 ~/.ssh/aws_key
+        echo "🔍 Adding host to known_hosts..."
+        ssh-keyscan -H $AWS_HOST >> ~/.ssh/known_hosts || {
+            echo "❌ Failed to add host to known_hosts"
             exit 1
         }
+        echo "✅ Host added to known_hosts"
+        
+        # בדיקת חיבור SSH עם debug מלא
+        echo "🔍 Testing SSH connection with MAXIMUM debug..."
+        echo "SSH command: ssh -vvv -i ~/.ssh/aws_key -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $AWS_USER@$AWS_HOST"
+        
+        if ssh -vvv -i ~/.ssh/aws_key -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $AWS_USER@$AWS_HOST "echo 'SSH connection successful'"; then
+            echo "✅ SSH connection successful!"
+        else
+            echo "❌ SSH connection failed with exit code $?"
+            echo "🔍 Debugging information:"
+            echo "Key file details:"
+            ls -la ~/.ssh/aws_key
+            echo "Key permissions: $(stat -c '%a' ~/.ssh/aws_key)"
+            echo "Key owner: $(stat -c '%U:%G' ~/.ssh/aws_key)"
+            echo "First 3 lines of key:"
+            head -3 ~/.ssh/aws_key
+            echo "Last 3 lines of key:"
+            tail -3 ~/.ssh/aws_key
+            echo "🔧 Possible issues:"
+            echo "1. Wrong username (try 'ubuntu' instead of 'ec2-user')"
+            echo "2. Security Group doesn't allow SSH from GitHub Actions"
+            echo "3. Instance is not running"
+            echo "4. Wrong private key"
+            exit 1
+        fi
         
         # העברת קובץ הזיפ ל-AWS
         echo "📤 Uploading zip file to AWS..."
-        scp -i ~/.ssh/aws_key -o StrictHostKeyChecking=no $ZIP_NAME $AWS_USER@$AWS_HOST:~/
+        if scp -v -i ~/.ssh/aws_key -o StrictHostKeyChecking=no $ZIP_NAME $AWS_USER@$AWS_HOST:~/; then
+            echo "✅ Zip file uploaded successfully"
+        else
+            echo "❌ Failed to upload zip file"
+            exit 1
+        fi
         
         # חיבור ל-AWS וביצוע הפריסה
         echo "🔧 Connecting to AWS and deploying..."
-        ssh -i ~/.ssh/aws_key -o StrictHostKeyChecking=no $AWS_USER@$AWS_HOST << ENDSSH
+        if ssh -i ~/.ssh/aws_key -o StrictHostKeyChecking=no $AWS_USER@$AWS_HOST << ENDSSH
             set -e
+            
+            echo "📁 Current directory: $(pwd)"
+            echo "📁 Home directory contents:"
+            ls -la ~/
             
             echo "📁 Checking for 'web' directory..."
             if [ ! -d "web" ]; then
                 echo "📁 Creating 'web' directory..."
-                mkdir -p web
+                mkdir -p web || {
+                    echo "❌ Failed to create web directory"
+                    exit 1
+                }
+                echo "✅ Web directory created"
+            else
+                echo "✅ Web directory already exists"
             fi
             
             echo "📂 Entering 'web' directory..."
-            cd web
+            cd web || {
+                echo "❌ Failed to enter web directory"
+                exit 1
+            }
+            echo "📁 Now in: $(pwd)"
             
-            echo "🔧 Setting up Docker permissions..."
-            # הוספת ec2-user לקבוצת docker
-            sudo usermod -aG docker ec2-user || true
-            
-            # הפעלת Docker service
-            sudo systemctl start docker || true
-            sudo systemctl enable docker || true
-            
-            echo "🗑️ Cleaning up old files and containers..."
-            # עצירת ומחיקת כל containers
-            sudo docker compose down --remove-orphans 2>/dev/null || true
-            
-            # מחיקת כל images
-            sudo docker system prune -a -f
-            
+            echo "🗑️ Cleaning up old files..."
             # מחיקת כל הקבצים הישנים
             rm -rf * .* 2>/dev/null || true
+            echo "✅ Old files cleaned up"
             
             echo "📦 Extracting new zip file..."
-            unzip -q ~/$ZIP_NAME
+            if unzip -q ~/$ZIP_NAME; then
+                echo "✅ Zip file extracted successfully"
+            else
+                echo "❌ Failed to extract zip file"
+                echo "Checking if zip file exists:"
+                ls -la ~/$ZIP_NAME || echo "Zip file not found"
+                exit 1
+            fi
             
             echo "🗑️ Removing zip file..."
-            rm ~/$ZIP_NAME
-            
-            echo "🐳 Running docker compose up with fresh build..."
-            sudo docker compose up -d --build --force-recreate
-            
-            echo "📊 Container status:"
-            sudo docker compose ps
+            rm ~/$ZIP_NAME || {
+                echo "❌ Failed to remove zip file"
+                exit 1
+            }
+            echo "✅ Zip file removed"
             
             echo "✅ Deployment completed successfully!"
-            echo "🌐 Application should be available at: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):5000"
+            echo "📁 Files deployed to: $(pwd)"
+            echo "📋 Files in directory:"
+            ls -la
+            echo "📊 Directory size:"
+            du -sh .
 ENDSSH
+        then
+            echo "✅ Remote deployment successful"
+        else
+            echo "❌ Remote deployment failed"
+            exit 1
+        fi
         
         # ניקוי מקומי
         echo "🧹 Cleaning up local files..."
-        rm $ZIP_NAME
-        rm ~/.ssh/aws_key
+        rm $ZIP_NAME || echo "Warning: Failed to remove local zip file"
+        rm ~/.ssh/aws_key || echo "Warning: Failed to remove SSH key"
         
         echo "🎉 AWS deployment completed successfully!"
+        echo "🌐 Your application should be available at: http://$AWS_HOST:5000"
