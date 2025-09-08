@@ -11,7 +11,11 @@
 - 🐳 תמיכה מלאה ב-Docker
 
 ## 🛠️ טכנולוגיות
+<<<<<<< HEAD
 
+=======
+wew
+>>>>>>> f986011 (sdsds)
 - **Backend**: Flask + SQLAlchemy
 - **Database**: MySQL
 - **Frontend**: HTML + CSS + Jinja2
