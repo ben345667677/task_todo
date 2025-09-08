@@ -243,7 +243,7 @@ jobs:
             ls -la
             echo "📊 Directory size:"
             du -sh .
-ENDSSH
+        ENDSSH
         then
             echo "✅ Remote deployment successful"
         else
