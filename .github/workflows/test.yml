@@ -118,26 +118,26 @@ jobs:
                 mkdir -p web
             fi
             
-      echo "📂 Entering 'web' directory..."
-      cd web
-      
-      echo "🔧 Setting up Docker permissions..."
-      # הוספת ec2-user לקבוצת docker
-      sudo usermod -aG docker ec2-user || true
-      
-      # הפעלת Docker service
-      sudo systemctl start docker || true
-      sudo systemctl enable docker || true
-      
-      echo "🗑️ Cleaning up old files and containers..."
-      # עצירת ומחיקת כל containers
-      sudo docker compose down --remove-orphans 2>/dev/null || true
-      
-      # מחיקת כל images
-      sudo docker system prune -a -f
-      
-      # מחיקת כל הקבצים הישנים
-      rm -rf * .* 2>/dev/null || true
+            echo "📂 Entering 'web' directory..."
+            cd web
+            
+            echo "🔧 Setting up Docker permissions..."
+            # הוספת ec2-user לקבוצת docker
+            sudo usermod -aG docker ec2-user || true
+            
+            # הפעלת Docker service
+            sudo systemctl start docker || true
+            sudo systemctl enable docker || true
+            
+            echo "🗑️ Cleaning up old files and containers..."
+            # עצירת ומחיקת כל containers
+            sudo docker compose down --remove-orphans 2>/dev/null || true
+            
+            # מחיקת כל images
+            sudo docker system prune -a -f
+            
+            # מחיקת כל הקבצים הישנים
+            rm -rf * .* 2>/dev/null || true
             
             echo "📦 Extracting new zip file..."
             unzip -q ~/$ZIP_NAME
@@ -145,11 +145,11 @@ jobs:
             echo "🗑️ Removing zip file..."
             rm ~/$ZIP_NAME
             
-      echo "🐳 Running docker compose up with fresh build..."
-      sudo docker compose up -d --build --force-recreate
-      
-      echo "📊 Container status:"
-      sudo docker compose ps
+            echo "🐳 Running docker compose up with fresh build..."
+            sudo docker compose up -d --build --force-recreate
+            
+            echo "📊 Container status:"
+            sudo docker compose ps
             
             echo "✅ Deployment completed successfully!"
             echo "🌐 Application should be available at: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):5000"
