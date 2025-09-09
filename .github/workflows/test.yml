@@ -1,76 +1,61 @@
-name: Compose Test
+name: Test and Deploy
 
-on: [push]
+on: 
+  push:
+    branches:
+      - main
+  pull_request:
 
 jobs:
-  test:
+  test-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      AWS_HOST: ec2-13-218-113-24.compute-1.amazonaws.com
-      AWS_USER: ec2-user
-      AWS_KEY: ${{ secrets.AWS_PEM }}
+
     steps:
-      - uses: actions/checkout@v4
+      # משוך את הקוד מ-GitHub
+      - uses: actions/checkout@v3
 
-      - name: Start Docker Compose
+      # שלב 1: להריץ בדיקות עם Docker Compose
+      - name: Run Tests
         run: |
-          docker compose down --remove-orphans || true
-          docker compose up -d --build
-
-      - name: Check test_client logs for result
-        shell: bash
-        run: |
-          set -e
-          for i in $(seq 1 120); do
-            LAST=$(docker compose logs --no-color test_client | tail -n 1 | tr -d '\r' || true)
-            if [ "$LAST" = "0" ]; then
-              exit 0
-            elif [ "$LAST" = "1" ]; then
-              exit 1
-            fi
-            sleep 2
-          done
-          exit 1
-
-      - name: Inline Deploy (runs only on success)
-        if: success()
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p ~/.ssh
-          printf '%s' "$AWS_KEY" | tr -d '\r' > ~/.ssh/aws_key
-          chmod 600 ~/.ssh/aws_key
-          ssh-keyscan -H "$AWS_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-
-          # Clean remote home (preserve .ssh), then ensure web directory exists
-          ssh -i ~/.ssh/aws_key "$AWS_USER@$AWS_HOST" 'set -e; if [ -d /home/ec2-user ]; then find /home/ec2-user -mindepth 1 -maxdepth 1 ! -name ".ssh" -exec rm -rf {} +; fi; mkdir -p /home/ec2-user/web'
-
-          ZIP_NAME="project_$(date +%Y%m%d_%H%M%S).zip"
-          zip -qr "$ZIP_NAME" . \
-            -x "venv/*" "__pycache__/*" "*.pyc" "*.pyo" \
-               ".git/*" ".github/*" "node_modules/*"
-
-          scp -i ~/.ssh/aws_key "$ZIP_NAME" "$AWS_USER@$AWS_HOST:/home/ec2-user/web/"
-
-          ssh -i ~/.ssh/aws_key "$AWS_USER@$AWS_HOST" bash -s <<'EOSSH'
-          set -euo pipefail
-          WEB_DIR=/home/ec2-user/web
-          ZIP_FILE=$(ls -t "$WEB_DIR"/project_*.zip | head -1)
-          cd "$WEB_DIR"
-          unzip -oq "$ZIP_FILE"
-          rm -f "$ZIP_FILE"
-          if command -v docker >/dev/null 2>&1; then
-            if docker compose version >/dev/null 2>&1; then
-              docker compose up -d --build
-            elif command -v docker-compose >/dev/null 2>&1; then
-              docker-compose up -d --build
-            fi
+          docker compose up -d
+          sleep 30
+          
+          TEST_OUTPUT=$(docker compose run --rm test python test.py)
+          echo "Test output: $TEST_OUTPUT"
+          
+          if [ "$TEST_OUTPUT" = "0" ]; then
+            echo "✅ SUCCESS: Test passed - output is 0"
+          else
+            echo "❌ FAILED: Test failed - output is $TEST_OUTPUT"
+            docker compose down
+            exit 1
           fi
-          EOSSH
+          
+          docker compose down
 
-          rm -f "$ZIP_NAME" ~/.ssh/aws_key
+      # שלב 2: פריסה לשרת AWS אם הבדיקות עברו
+      - name: Deploy to AWS
+        if: success()
+        uses: appleboy/ssh-action@v0.1.9
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ${{ secrets.AWS_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          script: |
+            set -e
+            cd /home/${{ secrets.AWS_USER }}/flask_todo || exit 1
 
-      - name: Cleanup
-        if: always()
-        run: docker compose down --remove-orphans
+            # תיקון בעיית safe.directory
+            git config --global --add safe.directory /home/${{ secrets.AWS_USER }}/flask_todo
+
+            echo "[1/4] מושך עדכונים מגיט..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "[2/4] עוצר קונטיינרים קיימים..."
+            docker-compose down -v || true
+
+            echo "[3/4] בונה ומרים קונטיינרים..."
+            docker-compose up -d --build
+
+            echo "[4/4] ✅ Deployment done!"
