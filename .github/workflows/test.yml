@@ -20,7 +20,7 @@ jobs:
           docker compose up -d
           sleep 30
           
-          TEST_OUTPUT=$(docker compose run --rm test python test.py)
+          TEST_OUTPUT=$(docker compose run --rm test_client python server_test.py)
           echo "Test output: $TEST_OUTPUT"
           
           if [ "$TEST_OUTPUT" = "0" ]; then
