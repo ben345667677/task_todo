@@ -17,45 +17,27 @@ jobs:
       # שלב 1: להריץ בדיקות עם Docker Compose
       - name: Run Tests
         run: |
+          echo "🚀 מרים את כל הקונטיינרים..."
           docker compose up -d
+          
+          echo "⏳ מחכה שהשירותים יהיו מוכנים..."
           sleep 30
           
+          echo "🧪 מריץ את הבדיקות..."
           TEST_OUTPUT=$(docker compose run --rm test_client python server_test.py)
-          echo "Test output: $TEST_OUTPUT"
+          
+          echo "�� לוגים של הקונטיינר test:"
+          docker compose logs test_client
+          
+          echo "�� תוצאת הבדיקה: $TEST_OUTPUT"
           
           if [ "$TEST_OUTPUT" = "0" ]; then
-            echo "✅ SUCCESS: Test passed - output is 0"
+            echo "✅ SUCCESS: הבדיקה עברה בהצלחה - תוצאה 0"
           else
-            echo "❌ FAILED: Test failed - output is $TEST_OUTPUT"
+            echo "❌ FAILED: הבדיקה נכשלה - תוצאה $TEST_OUTPUT"
             docker compose down
             exit 1
           fi
           
+          echo "🧹 מנקה ומסיים..."
           docker compose down
-
-      # שלב 2: פריסה לשרת AWS אם הבדיקות עברו
-      - name: Deploy to AWS
-        if: success()
-        uses: appleboy/ssh-action@v0.1.9
-        with:
-          host: ${{ secrets.AWS_HOST }}
-          username: ${{ secrets.AWS_USER }}
-          key: ${{ secrets.AWS_SSH_KEY }}
-          script: |
-            set -e
-            cd /home/${{ secrets.AWS_USER }}/flask_todo || exit 1
-
-            # תיקון בעיית safe.directory
-            git config --global --add safe.directory /home/${{ secrets.AWS_USER }}/flask_todo
-
-            echo "[1/4] מושך עדכונים מגיט..."
-            git fetch origin main
-            git reset --hard origin/main
-
-            echo "[2/4] עוצר קונטיינרים קיימים..."
-            docker-compose down -v || true
-
-            echo "[3/4] בונה ומרים קונטיינרים..."
-            docker-compose up -d --build
-
-            echo "[4/4] ✅ Deployment done!"
