@@ -1,10 +1,7 @@
 name: Deploy to Server
 
 on:
-  workflow_run:
-    workflows: ["Docker Test Server CI"]   # שם ה־workflow הקודם
-    types:
-      - completed
+  push:
 
 jobs:
   deploy:
