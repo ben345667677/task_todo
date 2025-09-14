@@ -23,7 +23,7 @@ jobs:
           key: ${{ secrets.AWS_PEM }}
           port: 22
           timeout: 30s
-          script: |
+          run: |
             echo "✅ התחברתי לשרת בהצלחה!"
             
             echo "👤 איזה משתמש אני:"
