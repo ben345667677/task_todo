@@ -77,8 +77,8 @@
               sudo systemctl enable --now docker
               
               echo "🧹 מוחק את תיקיית היוזר..."
-              rm -rf /home/${{ secrets.SERVER_USER }}
-              mkdir -p /home/${{ secrets.SERVER_USER }}
+              sudo rm -rf /home/${{ secrets.SERVER_USER }}
+              sudo mkdir -p /home/${{ secrets.SERVER_USER }}
               echo "✅ תיקייה נוקתה!"
 
         # שלב 3: העברת קבצי הפרויקט
