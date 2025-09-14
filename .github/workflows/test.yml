@@ -8,24 +8,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check secrets
-        run: |
-          if [ -z ${{ secrets.SERVER_HOST }}" ]; then
-            echo "AWS_SERVER_IP is missing"
-          else
-            echo "AWS_SERVER_IP is set"
-          fi
-          if [ -z "${{ secrets.SERVER_USER }}" ]; then
-            echo "AWS_SERVER_USER is missing"
-          else
-            echo "AWS_SERVER_USER is set"
-          fi
-          if [ -z "${{ secrets.AWS_PEM }}" ]; then
-            echo "AWS_SERVER_KEY is missing"
-          else
-            echo "AWS_SERVER_KEY is set"
-          fi
-
       - name: Deploy on server
         uses: appleboy/ssh-action@v1.0.3
         with:
