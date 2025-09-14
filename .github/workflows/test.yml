@@ -14,8 +14,8 @@ jobs:
       # משוך את הקוד מ-GitHub
       - uses: actions/checkout@v3
 
-      # שלב 1: בדיקת תלויות
-      - name: Check Dependencies
+      # שלב 1: בדיקת תלויות והכנת השרת
+      - name: Setup Server
         uses: appleboy/ssh-action@v0.1.9
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -48,42 +48,14 @@ jobs:
             sudo systemctl start docker
             sudo systemctl enable docker
             
-            echo "✅ בדיקת תלויות הושלמה!"
-
-      # שלב 2: מחיקת תיקיית USER
-      - name: Clean User Directory
-        if: success()
-        uses: appleboy/ssh-action@v0.1.9
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.AWS_PEM }}
-          script: |
-            set -e
+            echo "🧹 מנקה תיקייה ישנה..."
+            sudo rm -rf /home/${{ secrets.SERVER_USER }}/task_todo
+            sudo mkdir -p /home/${{ secrets.SERVER_USER }}/task_todo
             
-            echo "🧹 מוחק את תיקיית היוזר..."
-            sudo rm -rf /home/${{ secrets.SERVER_USER }}
-            sudo mkdir -p /home/${{ secrets.SERVER_USER }}
-            echo "✅ תיקייה נוקתה!"
+            echo "✅ השרת מוכן!"
 
-      # שלב 3: העברת הקבצים דרך SSH
-      - name: Copy Files via SSH
-        if: success()
-        uses: appleboy/ssh-action@v0.1.9
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.AWS_PEM }}
-          script: |
-            set -e
-            
-            echo "�� יוצר תיקיית עבודה..."
-            mkdir -p /home/${{ secrets.SERVER_USER }}/temp
-            
-            echo "✅ מוכן לקבלת קבצים..."
-
-      # שלב 3.1: העברת קבצים
-      - name: Upload Files
+      # שלב 2: העברת קבצים
+      - name: Copy Files
         if: success()
         uses: appleboy/scp-action@v0.1.4
         with:
@@ -91,28 +63,12 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.AWS_PEM }}
           source: "."
-          target: "/home/${{ secrets.SERVER_USER }}/temp/"
+          target: "/home/${{ secrets.SERVER_USER }}/task_todo/"
           strip_components: 1
           overwrite: true
 
-      # שלב 3.2: העברת קבצים לתיקייה הסופית
-      - name: Move Files to Final Location
-        if: success()
-        uses: appleboy/ssh-action@v0.1.9
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.AWS_PEM }}
-          script: |
-            set -e
-            
-            echo "📁 מעביר קבצים לתיקייה הסופית..."
-            cp -r /home/${{ secrets.SERVER_USER }}/temp/* /home/${{ secrets.SERVER_USER }}/
-            rm -rf /home/${{ secrets.SERVER_USER }}/temp
-            echo "✅ קבצים הועברו בהצלחה!"
-
-      # שלב 4: הרצת docker compose up
-      - name: Start Application
+      # שלב 3: הרצת הפרויקט
+      - name: Deploy Application
         if: success()
         uses: appleboy/ssh-action@v0.1.9
         with:
@@ -123,7 +79,10 @@ jobs:
             set -e
             
             echo "📁 עובר לתיקיית הפרויקט..."
-            cd /home/${{ secrets.SERVER_USER }}
+            cd /home/${{ secrets.SERVER_USER }}/task_todo
+            
+            echo "🛑 עוצר קונטיינרים קיימים..."
+            sudo docker-compose down -v || true
             
             echo "🏗️ מרים את הפרויקט..."
             sudo docker-compose up -d --build
