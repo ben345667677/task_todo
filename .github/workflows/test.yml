@@ -41,8 +41,8 @@
             echo "🧹 מנקה..."
             docker compose down -v
 
-        # שלב 2: התחברות לשרת והכנת תיקייה
-        - name: Prepare Remote Server
+        # שלב 2: התחברות לשרת ובדיקת תלויות
+        - name: Check Dependencies and Clean
           if: success()
           uses: appleboy/ssh-action@v0.1.9
           with:
@@ -53,12 +53,33 @@
               set -e
               echo "🔗 התחברתי לשרת בהצלחה!"
               
-              echo "🧹 מנקה את תיקיית הפרויקט..."
-              cd /home/${{ secrets.SERVER_USER }}/
-              rm -rf task_todo_old || true
-              mv task_todo task_todo_old || true
-              mkdir -p task_todo
-              echo "✅ תיקייה מוכנה!"
+              echo "🔍 בודק אם Docker מותקן..."
+              if ! command -v docker &> /dev/null; then
+                echo "🐳 מתקין Docker..."
+                sudo dnf update -y
+                sudo dnf -y install docker 
+                echo "✅ Docker הותקן בהצלחה!"
+              else
+                echo "✅ Docker כבר מותקן!"
+              fi
+              
+              echo "🔍 בודק אם Docker Compose מותקן..."
+              if ! command -v docker-compose &> /dev/null; then
+                echo "📦 מתקין Docker Compose..."
+                sudo curl -L "https://github.com/docker/compose/releases/download/v2.28.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+                sudo chmod +x /usr/local/bin/docker-compose
+                echo "✅ Docker Compose הותקן בהצלחה!"
+              else
+                echo "✅ Docker Compose כבר מותקן!"
+              fi
+              
+              echo "🔄 מפעיל את שירות Docker..."
+              sudo systemctl enable --now docker
+              
+              echo "🧹 מוחק את תיקיית היוזר..."
+              rm -rf /home/${{ secrets.SERVER_USER }}
+              mkdir -p /home/${{ secrets.SERVER_USER }}
+              echo "✅ תיקייה נוקתה!"
 
         # שלב 3: העברת קבצי הפרויקט
         - name: Copy Project Files
@@ -69,10 +90,10 @@
             username: ${{ secrets.SERVER_USER }}
             key: ${{ secrets.AWS_PEM }}
             source: "."
-            target: "/home/${{ secrets.SERVER_USER }}/task_todo/"
+            target: "/home/${{ secrets.SERVER_USER }}/"
             strip_components: 1
 
-        # שלב 4: התקנת Docker והרצת האפליקציה
+        # שלב 4: הרצת הפרויקט
         - name: Start Application on Server
           if: success()
           uses: appleboy/ssh-action@v0.1.9
@@ -82,34 +103,18 @@
             key: ${{ secrets.AWS_PEM }}
             script: |
               set -e
-              echo "🔍 בודק אם Docker מותקן..."
-              if ! command -v docker &> /dev/null; then
-                echo "🐳 מתקין Docker..."
-                sudo dnf update
-                sudo dnf -y install docker 
-                sudo curl -L "https://github.com/docker/compose/releases/download/v2.28.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-                echo "✅ Docker הותקן בהצלחה!"
-              else
-                echo "✅ Docker כבר מותקן!"
-              fi
               
-              echo "🔄 מפעיל את שירות Docker..."
-              sudo systemctl enable --now docker
-
               echo "📁 עובר לתיקיית הפרויקט..."
-              cd /home/${{ secrets.SERVER_USER }}/task_todo
+              cd /home/${{ secrets.SERVER_USER }}
               
-              echo "🛑 עוצר קונטיינרים קיימים..."
-              sudo docker compose down -v || true
-              
-              echo "🏗️ בונה ומרים קונטיינרים חדשים..."
-              sudo docker compose up -d --build
+              echo "🏗️ מרים את הפרויקט..."
+              sudo docker-compose up -d --build
               
               echo "⏳ מחכה שהשירותים יהיו מוכנים..."
               sleep 30
               
               echo "🔍 בודק שהשירותים רצים..."
-              sudo docker compose ps
+              sudo docker-compose ps
 
               echo "🩺 בדיקת בריאות..."
               curl -f http://localhost:5000/health || (echo '❌ Health check failed' && exit 1)
