@@ -1,1 +1,41 @@
+name: Test and Deploy
+
 on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Test
+        run: |
+          docker-compose up -d --build
+          logs_test=$(docker logs test_client)
+          if [[ "$logs_test" == *"1"* ]]; then
+            echo "❌ הטסט נכשל - לוג מכיל 1"
+            docker-compose down -v
+            exit 1
+          elif [[ "$logs_test" == *"0"* ]]; then
+            echo "✅ הטסט הצליח - לוג מכיל 0"
+            docker-compose down -v
+            exit 0
+          else
+            echo "⚠️ לא נמצא 1 או 0 בלוגים – נחשב ככישלון"
+            docker-compose down -v
+            exit 1
+          fi
+
+  copy-files:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Copy Files to VM
+        run: |
+          mkdir -p /tmp/app
+          cp -r . /tmp/app/
+          ls -la /tmp/app/
+          echo "${{ secrets.AWS_PEM }}">> /tmp/app/.ssh
