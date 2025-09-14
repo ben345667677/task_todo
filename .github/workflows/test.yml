@@ -49,6 +49,8 @@
             host: ${{ secrets.SERVER_HOST }}
             username: ${{ secrets.SERVER_USER }}
             key: ${{ secrets.AWS_PEM }}
+            port: 22
+            timeout: 10m
             script: |
               set -e
               echo "🔗 התחברתי לשרת בהצלחה!"
