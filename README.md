@@ -23,7 +23,7 @@
 
 ```bash
 # שכפול הפרויקט
-git clone <repository-url>
+git clone <repository-url>דד
 cd task_todo
 
 # הרצה עם Docker
