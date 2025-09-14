@@ -19,8 +19,35 @@ jobs:
         uses: appleboy/ssh-action@v0.1.9
         with:
           host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.AWS_PEM }}
+          username: ec2-user
+          key: |
+            -----BEGIN RSA PRIVATE KEY-----
+            MIIEowIBAAKCAQEAuVTagSZXquAl3KlSMVHJvWLEuvi5UOl1gKmbjBZw07bpc8Qm
+            h0DY6L5Sj5xWm1vzGNKaNOMJp9NPoakjjs7xD9rQVRnoV0S915w3xyHnwo5Mutgz
+            GcSbOVGtiBqdp0+9f0yssiris4PjL7CkvEAoIZecud/zpbx/TTsjPRLaRhA9L4/l
+            xWcNEwE0JaDD+MXgY75ohan3IHtAZMuHIW9YSPpc5jj51NI29QLE+1a8Eq0E8lho
+            Aq4FGw/p5W7m2t0xst9O/SFXpo7Er7tGLeVR4xVL2/t/rA0JEV0FXdGP07NaoxRr
+            8ihGK7yyawJjjuJwO7nt3bHrTRCH1ZALT09BHwIDAQABAoIBAF1UMND26REA3bA4
+            iE6T3F8F3QI2/MOVPXn0b4NlTZ4gL4H/1lMoQdM6/MKbPTXxYQMwEz3s01DzZdeI
+            IILrDZQpYd5pNIq18FAiuCgMl/Ruyo8RDvK8AlskGZo/pQK7cjcn+pOiaxVxpje+
+            4cZ3HH6GJgOolr7wpL7UuBMqakb7TJyHpfhy48UpMfiAdctadSYEJBbIpcCtOWlB
+            +P3NPZco2Lwv1WgqIka5riOuXCBoJ3w7qvKnwKSVONapJYaFaeDhEPzsZDKY3nYK
+            Ffhkx6K1QOH84+pSBG/lxigX5jks5lMDaZx7pFtV68KMvF6G/CqFPGuzOf7w3DUL
+            nsbq37ECgYEA6W+136TdpKHB+v+kffmBBAiST4HQ62aZQ7uNk+bWhnTxq3bWUnQG
+            ZGJmq/iw2jz9SKpxckV4SS+ruLVlZ45vMxTx/+7c7q7L0fFkrU/vcHO0X9EW2WHI
+            IWcT3d2ycSHM4bSiUuoYL6JN/7H8ygdTDMHRKl18BJ+hgBcMVDNZ3/cCgYEAyz7O
+            bGyIKklCtH4jkUN1Kqpz9tyzcbAKGtTjDZycaHSw3OWGnim33Fb1ssedRAnbZFiS
+            DUNgA7LwG3glJCxk7nUCildxTky+ykLYOtmcXbg5Z2noqR6nHdb+pi3QHxkC67Po
+            GSQSKQ17tKaKiaA7YlEHBBPHraXNVFIdE+aGLhkCgYB/X6Ut0xfdrSXbf4KR+oKb
+            YNH08DC/Qcx/WOd3vI1x8H2twbpQY17Zh5feXmShsIXEELy2TZHE3W4l61TZnK6w
+            gM1LiVqkIly0wbLdnrBX+8qAPebp1qENGOGOPloPwRG6VoX8GB/6XeWRj90Pn8+B
+            NoCbTUdOfovxCKKBj0OLIQKBgQCJpeqlkceSY/VySi+KdRZIJBLPsN8y8teVHnL7
+            yAJB2C3kHOrT+UsVRiu2vewrpUVZq4aWxvei6bAl2nPFEO/2c3aZ/Oi279ETKLxK
+            9xAohNkTya2RxDnIQtBJ+aMHPKg2u6xIQp6uAPyz90rCNKujRV8sCr1kRHNQVSBu
+            VuSvGQKBgAFhuXgo0X9kM+M3kXTmFKldeZlKpPEc6haTqFN6lkTg43nRnEjNvf8l
+            MBkUHtEFeOLZn2rhJq9r+QDf8VTd+ALOrOYo0/8L0b2TyIBL0oKdSD6MqAyGAmXq
+            TD3ig4DQebwUWwtOJeJCfmdy8pH2n76mBKsiJK6vJ7+6o4BXLFDx
+            -----END RSA PRIVATE KEY-----
           port: 22
           timeout: 30s
           script: |
