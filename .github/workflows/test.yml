@@ -23,17 +23,5 @@ jobs:
           key: ${{ secrets.AWS_PEM }}
           port: 22
           timeout: 30s
-          run: |
-            echo "✅ התחברתי לשרת בהצלחה!"
-            
-            echo "👤 איזה משתמש אני:"
-            whoami
-            
-            echo "📂 איפה הנתיב שלי:"
+          script: |  # ✅ זה צריך להיות script, לא run!
             pwd
-            
-            echo "📁 יוצר תיקייה..."
-            mkdir -p /home/${{ secrets.SERVER_USER }}/test_folder
-            echo "✅ תיקייה נוצרה!"
-            
-            echo "✅ הכל עבד בהצלחה!"
