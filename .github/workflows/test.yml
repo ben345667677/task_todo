@@ -49,7 +49,7 @@ jobs:
         with:
           host: ${{ secrets.SERVER_HOST }}        # כתובת השרת
           username: ${{ secrets.SERVER_USER }}    # שם משתמש
-          key: ${{ secrets.SERVER_SSH_KEY }}      # מפתח SSH
+          key: ${{ secrets.AWS_PEM }}             # מפתח AWS PEM
           script: |
             set -e  # יציאה אם יש שגיאה
             
@@ -72,7 +72,7 @@ jobs:
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          key: ${{ secrets.AWS_PEM }}
           source: "."
           target: "/home/${{ secrets.SERVER_USER }}/task_todo/"
           strip_components: 1
@@ -84,7 +84,7 @@ jobs:
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          key: ${{ secrets.AWS_PEM }}
           script: |
             set -e
             
