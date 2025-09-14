@@ -1,18 +1,27 @@
-name: Deploy to Server
+name: Simple SSH Test
 
-on:
+on: 
   push:
+    branches:
+      - main
+  pull_request:
 
 jobs:
-  deploy:
+  simple-ssh-test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy on server
-        uses: appleboy/ssh-action@v1.0.3
+      # משיכת קוד מהרפו
+      - uses: actions/checkout@v3
+
+      # בדיקה פשוטה של חיבור SSH
+      - name: Test SSH Connection
+        uses: appleboy/ssh-action@v0.1.9
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.AWS_PEM }}
-          script: |
+          port: 22
+          timeout: 30s
+          script: |  # ✅ זה צריך להיות script, לא run!
             pwd
