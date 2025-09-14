@@ -1,4 +1,4 @@
-name: Simple SSH Test
+name: Test and Deploy
 
 on: 
   push:
@@ -7,25 +7,151 @@ on:
   pull_request:
 
 jobs:
-  simple-ssh-test:
+  test-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # משיכת קוד מהרפו
+      # משוך את הקוד מ-GitHub
       - uses: actions/checkout@v3
 
-      # בדיקה פשוטה של חיבור SSH
-      - name: Test SSH Connection
+      # שלב 1: להריץ בדיקות עם Docker Compose
+      - name: Run Tests
+        run: |
+          echo "🚀 מרים את כל הקונטיינרים..."
+          docker compose up -d
+          
+          echo "⏳ מחכה שהשירותים יהיו מוכנים..."
+          sleep 30
+          
+          echo "🧪 מריץ את הבדיקות..."
+          TEST_OUTPUT=$(docker compose run --rm test_client python server_test.py)
+          
+          echo "�� לוגים של הקונטיינר test:"
+          docker compose logs test_client
+          
+          echo "�� תוצאת הבדיקה: $TEST_OUTPUT"
+          
+          if [ "$TEST_OUTPUT" = "0" ]; then
+            echo "✅ SUCCESS: הבדיקה עברה בהצלחה - תוצאה 0"
+          else
+            echo "❌ FAILED: הבדיקה נכשלה - תוצאה $TEST_OUTPUT"
+            docker compose down
+            exit 1
+          fi
+          
+          echo "�� מנקה ומסיים..."
+          docker compose down
+
+      # שלב 2: התחברות לשרת והעברה (רץ רק אם הבדיקה הצליחה)
+      - name: Deploy to Remote Server
+        if: success()
+        uses: appleboy/ssh-action@v0.1.9
+        with:
+          host: ${{ secrets.SERVER_HOST }}        # כתובת השרת
+          username: ${{ secrets.SERVER_USER }}    # שם משתמש
+          key: ${{ secrets.AWS_PEM }}             # מפתח AWS PEM
+          script: |
+            set -e  # יציאה אם יש שגיאה
+            
+            echo "🔗 התחברתי לשרת בהצלחה!"
+            
+            # שלב 1: ניקוי התיקייה
+            echo "🧹 מנקה את תיקיית הפרויקט..."
+            cd /home/${{ secrets.SERVER_USER }}/
+            rm -rf task_todo_old || true  # גיבוי ישן
+            mv task_todo task_todo_old || true  # שמירת גרסה ישנה
+            mkdir -p task_todo
+            cd task_todo
+            
+            echo "✅ תיקייה נוקתה בהצלחה!"
+
+      # שלב 3: העברת קבצי הפרויקט
+      - name: Copy Project Files
+        if: success()
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.AWS_PEM }}
+          source: "."
+          target: "/home/${{ secrets.SERVER_USER }}/task_todo/"
+          strip_components: 1
+
+      # שלב 4: הרצת הפרויקט על השרת
+      - name: Start Application on Server
+        if: success()
         uses: appleboy/ssh-action@v0.1.9
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.AWS_PEM }}
-          port: 22
-          timeout: 30s
-          script: |  # ✅ זה צריך להיות script, לא run!
-<<<<<<< Updated upstream
-            pwd
-=======
-            pwd
->>>>>>> Stashed changes
+          script: |
+            set -e
+            
+            echo "🔍 בודק אם Docker מותקן..."
+            if ! command -v docker &> /dev/null; then
+              echo "�� Docker לא מותקן, מתקין..."
+              
+              # עדכון רשימת החבילות
+              sudo apt-get update
+              
+              # התקנת חבילות נדרשות
+              sudo apt-get install -y \
+                ca-certificates \
+                curl \
+                gnupg \
+                lsb-release
+              
+              # הוספת מפתח GPG של Docker
+              sudo mkdir -p /etc/apt/keyrings
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+              
+              # הוספת repository של Docker
+              echo \
+                "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+                $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+              
+              # עדכון רשימת החבילות
+              sudo apt-get update
+              
+              # התקנת Docker
+              sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+              
+              # הוספת המשתמש לקבוצת docker
+              sudo usermod -aG docker $USER
+              
+              echo "✅ Docker הותקן בהצלחה!"
+            else
+              echo "✅ Docker כבר מותקן!"
+            fi
+            
+            echo "�� בודק אם Docker Compose מותקן..."
+            if ! command -v docker compose &> /dev/null; then
+              echo "📦 Docker Compose לא מותקן, מתקין..."
+              sudo apt-get install -y docker-compose-plugin
+              echo "✅ Docker Compose הותקן בהצלחה!"
+            else
+              echo "✅ Docker Compose כבר מותקן!"
+            fi
+            
+            echo "🔄 מפעיל מחדש את שירות Docker..."
+            sudo systemctl start docker
+            sudo systemctl enable docker
+            
+            echo "📁 עובר לתיקיית הפרויקט..."
+            cd /home/${{ secrets.SERVER_USER }}/task_todo
+            
+            echo "�� עוצר קונטיינרים קיימים..."
+            docker compose down -v || true
+            
+            echo "🏗️ בונה ומרים קונטיינרים חדשים..."
+            docker compose up -d --build
+            
+            echo "⏳ מחכה שהשירותים יהיו מוכנים..."
+            sleep 30
+            
+            echo "🔍 בודק שהשירותים רצים..."
+            docker compose ps
+            
+            echo "✅ הפרויקט הועלה בהצלחה לשרת!"
+            echo "🌐 האפליקציה זמינה בכתובת: http://${{ secrets.SERVER_HOST }}:5000"
