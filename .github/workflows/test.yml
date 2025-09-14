@@ -24,4 +24,8 @@ jobs:
           port: 22
           timeout: 30s
           script: |  # ✅ זה צריך להיות script, לא run!
+<<<<<<< Updated upstream
             pwd
+=======
+            pwd
+>>>>>>> Stashed changes
