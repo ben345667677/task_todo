@@ -86,7 +86,8 @@
               if ! command -v docker &> /dev/null; then
                 echo "🐳 מתקין Docker..."
                 sudo dnf update
-                sudo dnf -y install docker docker-compose
+                sudo dnf -y install docker 
+                sudo curl -L "https://github.com/docker/compose/releases/download/v2.28.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
                 echo "✅ Docker הותקן בהצלחה!"
               else
                 echo "✅ Docker כבר מותקן!"
