@@ -35,7 +35,22 @@ jobs:
       - uses: actions/checkout@v3
       - name: Copy Files to VM
         run: |
+          echo "📁 יוצר תיקיית עבודה ב-VM..."
           mkdir -p /tmp/app
+          echo " מעתיק קבצים..."
           cp -r . /tmp/app/
+          echo "✅ הקבצים הועתקו ל-VM!"
+          echo " תוכן התיקייה:"
           ls -la /tmp/app/
-          echo "${{ secrets.AWS_PEM }}">> /tmp/app/.ssh
+          echo " יוצר תיקיית SSH..."
+          mkdir -p /tmp/app/.ssh
+          echo " שומר מפתח SSH..."
+          echo "${{ secrets.AWS_PEM }}" >> /tmp/app/.ssh/aws_key.pem
+          echo "✅ מפתח SSH נשמר!"
+          echo " תוכן תיקיית SSH:"
+          ls -la /tmp/app/.ssh/
+          echo "🐳 בדיקת Docker:"
+          docker --version
+          echo " בדיקת Docker Compose:"
+          docker-compose --version
+          echo "✅ הכל מוכן!"
