@@ -1,60 +1,143 @@
-name: Simple SSH Test
+  name: Test and Deploy
 
-on: 
-  push:
-    branches:
-      - main
-  pull_request:
+  on: 
+    push:
+      branches:
+        - main
+    pull_request:
 
-jobs:
-  simple-ssh-test:
-    runs-on: ubuntu-latest
+  jobs:
+    test-and-deploy:
+      runs-on: ubuntu-latest
 
-    steps:
-      # משיכת קוד מהרפו
-      - uses: actions/checkout@v3
+      steps:
+        # משיכת קוד מהרפו
+        - uses: actions/checkout@v3
 
-      # בדיקה פשוטה של חיבור SSH
-      - name: Test SSH Connection
-        uses: appleboy/ssh-action@v0.1.9
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ec2-user
-          key: |
-            -----BEGIN RSA PRIVATE KEY-----
-            MIIEowIBAAKCAQEAuVTagSZXquAl3KlSMVHJvWLEuvi5UOl1gKmbjBZw07bpc8Qm
-            h0DY6L5Sj5xWm1vzGNKaNOMJp9NPoakjjs7xD9rQVRnoV0S915w3xyHnwo5Mutgz
-            GcSbOVGtiBqdp0+9f0yssiris4PjL7CkvEAoIZecud/zpbx/TTsjPRLaRhA9L4/l
-            xWcNEwE0JaDD+MXgY75ohan3IHtAZMuHIW9YSPpc5jj51NI29QLE+1a8Eq0E8lho
-            Aq4FGw/p5W7m2t0xst9O/SFXpo7Er7tGLeVR4xVL2/t/rA0JEV0FXdGP07NaoxRr
-            8ihGK7yyawJjjuJwO7nt3bHrTRCH1ZALT09BHwIDAQABAoIBAF1UMND26REA3bA4
-            iE6T3F8F3QI2/MOVPXn0b4NlTZ4gL4H/1lMoQdM6/MKbPTXxYQMwEz3s01DzZdeI
-            IILrDZQpYd5pNIq18FAiuCgMl/Ruyo8RDvK8AlskGZo/pQK7cjcn+pOiaxVxpje+
-            4cZ3HH6GJgOolr7wpL7UuBMqakb7TJyHpfhy48UpMfiAdctadSYEJBbIpcCtOWlB
-            +P3NPZco2Lwv1WgqIka5riOuXCBoJ3w7qvKnwKSVONapJYaFaeDhEPzsZDKY3nYK
-            Ffhkx6K1QOH84+pSBG/lxigX5jks5lMDaZx7pFtV68KMvF6G/CqFPGuzOf7w3DUL
-            nsbq37ECgYEA6W+136TdpKHB+v+kffmBBAiST4HQ62aZQ7uNk+bWhnTxq3bWUnQG
-            ZGJmq/iw2jz9SKpxckV4SS+ruLVlZ45vMxTx/+7c7q7L0fFkrU/vcHO0X9EW2WHI
-            IWcT3d2ycSHM4bSiUuoYL6JN/7H8ygdTDMHRKl18BJ+hgBcMVDNZ3/cCgYEAyz7O
-            bGyIKklCtH4jkUN1Kqpz9tyzcbAKGtTjDZycaHSw3OWGnim33Fb1ssedRAnbZFiS
-            DUNgA7LwG3glJCxk7nUCildxTky+ykLYOtmcXbg5Z2noqR6nHdb+pi3QHxkC67Po
-            GSQSKQ17tKaKiaA7YlEHBBPHraXNVFIdE+aGLhkCgYB/X6Ut0xfdrSXbf4KR+oKb
-            YNH08DC/Qcx/WOd3vI1x8H2twbpQY17Zh5feXmShsIXEELy2TZHE3W4l61TZnK6w
-            gM1LiVqkIly0wbLdnrBX+8qAPebp1qENGOGOPloPwRG6VoX8GB/6XeWRj90Pn8+B
-            NoCbTUdOfovxCKKBj0OLIQKBgQCJpeqlkceSY/VySi+KdRZIJBLPsN8y8teVHnL7
-            yAJB2C3kHOrT+UsVRiu2vewrpUVZq4aWxvei6bAl2nPFEO/2c3aZ/Oi279ETKLxK
-            9xAohNkTya2RxDnIQtBJ+aMHPKg2u6xIQp6uAPyz90rCNKujRV8sCr1kRHNQVSBu
-            VuSvGQKBgAFhuXgo0X9kM+M3kXTmFKldeZlKpPEc6haTqFN6lkTg43nRnEjNvf8l
-            MBkUHtEFeOLZn2rhJq9r+QDf8VTd+ALOrOYo0/8L0b2TyIBL0oKdSD6MqAyGAmXq
-            TD3ig4DQebwUWwtOJeJCfmdy8pH2n76mBKsiJK6vJ7+6o4BXLFDx
-            -----END RSA PRIVATE KEY-----
-          port: 22
-          timeout: 30s
-          script: |
-            echo "✅ התחברתי לשרת בהצלחה!"
+        # שלב 1: להריץ בדיקות עם Docker Compose
+        - name: Run Tests
+          run: |
+            echo "🚀 מרים את כל הקונטיינרים..."
+            docker compose up -d
             
-            echo "📁 יוצר תיקייה..."
-            mkdir -p /home/${{ secrets.SERVER_USER }}/test_folder
-            echo "✅ תיקייה נוצרה!"
+            echo "⏳ מחכה שהשירותים יהיו מוכנים..."
+            sleep 30
             
-            echo "✅ הכל עבד בהצלחה!"
+            echo "🧪 מריץ את הבדיקות..."
+            docker compose run --rm test_client python server_test.py
+            TEST_EXIT=$?
+            
+            echo "📜 לוגים של כל השירותים:"
+            docker compose logs
+            
+            if [ $TEST_EXIT -eq 0 ]; then
+              echo "✅ SUCCESS: הבדיקות עברו בהצלחה"
+            else
+              echo "❌ FAILED: הבדיקות נכשלו"
+              docker compose down -v
+              exit 1
+            fi
+            
+            echo "🧹 מנקה..."
+            docker compose down -v
+
+        # שלב 2: בדיקת חיבור SSH
+        - name: Test SSH Connection
+          if: success()
+          uses: appleboy/ssh-action@v0.1.9
+          with:
+            host: ${{ secrets.SERVER_HOST }}
+            username: ${{ secrets.SERVER_USER }}
+            key: ${{ secrets.AWS_PEM }}
+            port: 22
+            timeout: 30s
+            script: |
+              echo "✅ התחברתי לשרת בהצלחה!"
+              whoami
+              pwd
+              echo "🔍 בודק מערכת הפעלה..."
+              cat /etc/os-release
+              echo "✅ בדיקת חיבור הושלמה!"
+
+        # שלב 3: התחברות לשרת ובדיקת תלויות
+        - name: Check Dependencies and Clean
+          if: success()
+          uses: appleboy/ssh-action@v0.1.9
+          with:
+            host: ${{ secrets.SERVER_HOST }}
+            username: ${{ secrets.SERVER_USER }}
+            key: ${{ secrets.AWS_PEM }}
+            port: 22
+            timeout: 10m
+            script: |
+              set -e
+              echo "🔗 התחברתי לשרת בהצלחה!"
+              
+              echo "🔍 בודק אם Docker מותקן..."
+              if ! command -v docker &> /dev/null; then
+                echo "🐳 מתקין Docker..."
+                sudo dnf update -y
+                sudo dnf -y install docker 
+                echo "✅ Docker הותקן בהצלחה!"
+              else
+                echo "✅ Docker כבר מותקן!"
+              fi
+              
+              echo "🔍 בודק אם Docker Compose מותקן..."
+              if ! command -v docker-compose &> /dev/null; then
+                echo "📦 מתקין Docker Compose..."
+                sudo curl -L "https://github.com/docker/compose/releases/download/v2.28.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+                sudo chmod +x /usr/local/bin/docker-compose
+                echo "✅ Docker Compose הותקן בהצלחה!"
+              else
+                echo "✅ Docker Compose כבר מותקן!"
+              fi
+              
+              echo "🔄 מפעיל את שירות Docker..."
+              sudo systemctl enable --now docker
+              
+              echo "🧹 מוחק את תיקיית היוזר..."
+              sudo rm -rf /home/${{ secrets.SERVER_USER }}
+              sudo mkdir -p /home/${{ secrets.SERVER_USER }}
+              echo "✅ תיקייה נוקתה!"
+
+        # שלב 4: העברת קבצי הפרויקט
+        - name: Copy Project Files
+          if: success()
+          uses: appleboy/scp-action@v0.1.4
+          with:
+            host: ${{ secrets.SERVER_HOST }}
+            username: ${{ secrets.SERVER_USER }}
+            key: ${{ secrets.AWS_PEM }}
+            source: "."
+            target: "/home/${{ secrets.SERVER_USER }}/"
+            strip_components: 1
+
+        # שלב 5: הרצת הפרויקט
+        - name: Start Application on Server
+          if: success()
+          uses: appleboy/ssh-action@v0.1.9
+          with:
+            host: ${{ secrets.SERVER_HOST }}
+            username: ${{ secrets.SERVER_USER }}
+            key: ${{ secrets.AWS_PEM }}
+            script: |
+              set -e
+              
+              echo "📁 עובר לתיקיית הפרויקט..."
+              cd /home/${{ secrets.SERVER_USER }}
+              
+              echo "🏗️ מרים את הפרויקט..."
+              sudo docker-compose up -d --build
+              
+              echo "⏳ מחכה שהשירותים יהיו מוכנים..."
+              sleep 30
+              
+              echo "🔍 בודק שהשירותים רצים..."
+              sudo docker-compose ps
+
+              echo "🩺 בדיקת בריאות..."
+              curl -f http://localhost:5000/health || (echo '❌ Health check failed' && exit 1)
+
+              echo "✅ הפרויקט הועלה בהצלחה לשרת!"
+              echo "🌐 האפליקציה זמינה בכתובת: http://${{ secrets.SERVER_HOST }}:5000"
