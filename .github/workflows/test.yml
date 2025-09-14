@@ -26,6 +26,12 @@ jobs:
           script: |
             echo "✅ התחברתי לשרת בהצלחה!"
             
+            echo "👤 איזה משתמש אני:"
+            whoami
+            
+            echo "📂 איפה הנתיב שלי:"
+            pwd
+            
             echo "📁 יוצר תיקייה..."
             mkdir -p /home/${{ secrets.SERVER_USER }}/test_folder
             echo "✅ תיקייה נוצרה!"
