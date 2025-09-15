@@ -50,16 +50,18 @@ jobs:
   deploy_to_aws:
     needs: build_and_deploy
     runs-on: ubuntu-latest
+    env:
+      AWS_PEM: ${{ secrets.AWS_PEM }}
+      AWS_USER: ${{ secrets.AWS_USER }}
+      AWS_IP: ${{ secrets.AWS_IP }}
     steps:
       - uses: actions/checkout@v3
-      - name: Deploy to AWS
-        run: |
-      - name: Deploy to AWS
+      - name: Setup SSH and Deploy
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.AWS_PEM }}" > ~/.ssh/aws_key.pem
+          echo "$AWS_PEM" > ~/.ssh/aws_key.pem
           chmod 600 ~/.ssh/aws_key.pem
-          ssh -i ~/.ssh/aws_key.pem ${{ secrets.AWS_USER }}@${{ secrets.AWS_IP }} "cd /home/${{ secrets.AWS_USER }}/task-todo-main && rm -rf *"
-          scp -i ~/.ssh/aws_key.pem docker-compose.yml ${{ secrets.AWS_USER }}@${{ secrets.AWS_IP }}:/home/${{ secrets.AWS_USER }}/task-todo-main/
-
+          ssh -i ~/.ssh/aws_key.pem -o StrictHostKeyChecking=no $AWS_USER@$AWS_IP "cd /home/$AWS_USER/task-todo-main && rm -rf *"
+          scp -i ~/.ssh/aws_key.pem docker-compose.yml $AWS_USER@$AWS_IP:/home/$AWS_USER/task-todo-main/
+          ssh -i ~/.ssh/aws_key.pem $AWS_USER@$AWS_IP "cd /home/$AWS_USER/task-todo-main && docker-compose up -d --build"
           echo "✅ Deployment הושלם!"
