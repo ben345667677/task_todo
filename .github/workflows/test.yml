@@ -50,14 +50,16 @@ jobs:
   deploy_to_server:
     needs: build_and_deploy
     runs-on: ubuntu-latest
+    env:
+      SERVER_PEM: ${{ secrets.AWS_PEM }}
     steps:
       - uses: actions/checkout@v3
       - name: Deploy to Server
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "$AWS_PEM" > ~/.ssh/server_key.pem
+          printf '%s\n' "$SERVER_PEM" > ~/.ssh/server_key.pem
           chmod 600 ~/.ssh/server_key.pem
-          ssh -i ~/.ssh/server_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $SERVER_USER@$SERVER_HOST "cd /home/$SERVER_USER/task-todo-main && rm -rf *"
-          scp -i ~/.ssh/server_key.pem docker-compose.yml $SERVER_USER@$SERVER_HOST:/home/$SERVER_USER/task-todo-main/
-          ssh -i ~/.ssh/server_key.pem $SERVER_USER@$SERVER_HOST "cd /home/$SERVER_USER/task-todo-main && docker-compose up -d --build"
+          ssh -i ~/.ssh/server_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@13.220.50.180 "cd /home/ec2-user/task-todo-main && rm -rf *"
+          scp -i ~/.ssh/server_key.pem docker-compose.yml ec2-user@13.220.50.180:/home/ec2-user/task-todo-main/
+          ssh -i ~/.ssh/server_key.pem ec2-user@13.220.50.180 "cd /home/ec2-user/task-todo-main && docker-compose up -d --build"
           echo "✅ Deployment הושלם!"
