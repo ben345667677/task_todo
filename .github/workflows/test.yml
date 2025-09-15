@@ -59,6 +59,9 @@ jobs:
       - name: Setup SSH and Deploy
         run: |
           mkdir -p ~/.ssh
+          echo "AWS_USER: $AWS_USER"
+          echo "AWS_IP: $AWS_IP"
+          echo "AWS_PEM length: ${#AWS_PEM}"
           echo "$AWS_PEM" > ~/.ssh/aws_key.pem
           chmod 600 ~/.ssh/aws_key.pem
           ssh -i ~/.ssh/aws_key.pem -o StrictHostKeyChecking=no $AWS_USER@$AWS_IP "cd /home/$AWS_USER/task-todo-main && rm -rf *"
