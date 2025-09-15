@@ -21,36 +21,9 @@ jobs:
           elif [[ "$logs_test" == *"0"* ]]; then
             echo "✅ הטסט הצליח - לוג מכיל 0"
             docker compose down -v
-            exit 0
+            exit 1
           else
             echo "⚠️ לא נמצא 1 או 0 בלוגים – נחשב ככישלון"
             docker compose down -v
             exit 1
           fi
-
-  copy-files:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Copy Files to VM
-        run: |
-          echo "📁 יוצר תיקיית עבודה ב-VM..."
-          mkdir -p /tmp/app
-          echo " מעתיק קבצים..."
-          cp -r . /tmp/app/
-          echo "✅ הקבצים הועתקו ל-VM!"
-          echo " תוכן התיקייה:"
-          ls -la /tmp/app/
-          echo " יוצר תיקיית SSH..."
-          mkdir -p /tmp/app/.ssh
-          echo " שומר מפתח SSH..."
-          echo "${{ secrets.AWS_PEM }}" >> /tmp/app/.ssh/aws_key.pem
-          echo "✅ מפתח SSH נשמר!"
-          echo " תוכן תיקיית SSH:"
-          ls -la /tmp/app/.ssh/
-          echo "🐳 בדיקת Docker:"
-          docker --version
-          echo " בדיקת Docker Compose:"
-          docker compose version
-          echo "✅ הכל מוכן!"
