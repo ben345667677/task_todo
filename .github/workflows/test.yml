@@ -13,6 +13,7 @@ jobs:
       - name: Test
         run: |
           docker compose up -d --build
+          docker wait test_client
           logs_test=$(docker logs test_client)
           if [[ "$logs_test" == *"1"* ]]; then
             echo "❌ הטסט נכשל - לוג מכיל 1"
@@ -21,9 +22,10 @@ jobs:
           elif [[ "$logs_test" == *"0"* ]]; then
             echo "✅ הטסט הצליח - לוג מכיל 0"
             docker compose down -v
-            exit 1
+            exit 0
           else
             echo "⚠️ לא נמצא 1 או 0 בלוגים – נחשב ככישלון"
+            echo "Test logs: $logs_test"
             docker compose down -v
             exit 1
           fi
