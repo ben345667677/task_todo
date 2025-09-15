@@ -47,7 +47,6 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/flask-todo-app:latest
           echo "✅ האימג' הועלה ל-Docker Hub!"
 
-<<<<<<< HEAD
   deploy_to_aws:
     needs: build_and_deploy
     runs-on: ubuntu-latest
@@ -66,44 +65,3 @@ jobs:
           scp -i ~/.ssh/aws_key.pem docker-compose.yml $AWS_USER@$AWS_IP:/home/$AWS_USER/task-todo-main/
           ssh -i ~/.ssh/aws_key.pem $AWS_USER@$AWS_IP "cd /home/$AWS_USER/task-todo-main && docker-compose up -d --build"
           echo "✅ Deployment הושלם!"
-=======
-          deploy_to_aws:
-            needs: build_and_deploy
-            runs-on: ubuntu-latest
-            env:
-              AWS_PEM: ${{ secrets.AWS_PEM }}
-              AWS_USER: ${{ secrets.AWS_USER }}
-              AWS_IP: ${{ secrets.AWS_IP }}
-            steps:
-              - uses: actions/checkout@v3
-              - name: Create .env file
-                run: |
-                  # יצירת קובץ .env
-                  cat > .env << EOF
-                  AWS_PEM="$AWS_PEM"
-                  AWS_USER="$AWS_USER"
-                  AWS_IP="$AWS_IP"
-                  DOCKER_USERNAME="${{ secrets.DOCKER_USERNAME }}"
-                  DOCKER_IMAGE="${{ secrets.DOCKER_USERNAME }}/flask-todo-app:latest"
-                  EOF
-                  echo "✅ קובץ .env נוצר!"
-                  cat .env
-              - name: Setup SSH and Deploy
-                run: |
-                  # יצירת תיקיית SSH
-                  mkdir -p ~/.ssh
-                  
-                  # שמירת ה-private key
-                  echo "$AWS_PEM" > ~/.ssh/aws_key.pem
-                  chmod 600 ~/.ssh/aws_key.pem
-                  
-                  # העברת קבצים לשרת
-                  echo "📦 מעביר קבצים לשרת..."
-                  scp -i ~/.ssh/aws_key.pem .env docker-compose.yml $AWS_USER@$AWS_IP:/home/$AWS_USER/task-todo-main/
-                  
-                  # הפעלת docker-compose
-                  echo "�� מפעיל docker-compose..."
-                  ssh -i ~/.ssh/aws_key.pem $AWS_USER@$AWS_IP "cd /home/$AWS_USER/task-todo-main && docker-compose up -d --build"
-                  
-                  echo "✅ Deployment הושלם בהצלחה!"
->>>>>>> origin/main
