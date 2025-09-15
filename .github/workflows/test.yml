@@ -29,3 +29,20 @@ jobs:
             docker compose down -v
             exit 1
           fi
+  
+  build_and_deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - uses: actions/checkout@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build and push Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/flask-todo-app:latest .
+          docker push ${{ secrets.DOCKER_USERNAME }}/flask-todo-app:latest
+          echo "✅ האימג' הועלה ל-Docker Hub!"
