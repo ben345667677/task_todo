@@ -47,23 +47,116 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/flask-todo-app:latest
           echo "✅ האימג' הועלה ל-Docker Hub!"
 
-  deploy_to_server:
-    needs: build_and_deploy
-    runs-on: ubuntu-latest
-    env:
-      SERVER_HOST: ${{ secrets.SERVER_HOST }}
-      SERVER_USER: ${{ secrets.SERVER_USER }}
-      SERVER_PEM: ${{ secrets.SERVER_PEM }}
-    steps:
-      - uses: actions/checkout@v3
-      - name: Deploy to Server
-        run: |
-          echo "SERVER_USER: $SERVER_USER"
-          echo "SERVER_PEM: $SERVER_PEM"
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SERVER_PEM" > ~/.ssh/server_key.pem
-          chmod 600 ~/.ssh/server_key.pem
-          ssh -i ~/.ssh/server_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $SERVER_USER@$SERVER_HOST "cd /home/$SERVER_USER/task-todo-main && rm -rf *"
-          scp -i ~/.ssh/server_key.pem docker-compose.yml $SERVER_USER@$SERVER_HOST:/home/$SERVER_USER/task-todo-main/
-          ssh -i ~/.ssh/server_key.pem $SERVER_USER@$SERVER_HOST "cd /home/$SERVER_USER/task-todo-main && docker-compose up -d --build"
-          echo "✅ Deployment הושלם!"
+          deploy_to_server:
+            needs: build_and_deploy
+            runs-on: ubuntu-latest
+            env:
+              SERVER_HOST: ${{ secrets.SERVER_HOST }}
+              SERVER_USER: ${{ secrets.SERVER_USER }}
+              SERVER_PEM: ${{ secrets.SERVER_PEM }}
+            steps:
+              - uses: actions/checkout@v3
+              - name: Debug Everything
+                run: |
+                  echo "🔍 DEBUG - בדיקת כל הפרמטרים:"
+                  echo "=================================="
+                  echo ""
+                  
+                  # בדיקת ה-secrets
+                  echo "📋 SECRETS CHECK:"
+                  echo "SERVER_HOST: '$SERVER_HOST'"
+                  echo "SERVER_USER: '$SERVER_USER'"
+                  echo "SERVER_PEM length: ${#SERVER_PEM}"
+                  echo ""
+                  
+                  # בדיקת ריקות
+                  if [ -z "$SERVER_HOST" ]; then
+                    echo "❌ SERVER_HOST ריק!"
+                  else
+                    echo "✅ SERVER_HOST: $SERVER_HOST"
+                  fi
+                  
+                  if [ -z "$SERVER_USER" ]; then
+                    echo "❌ SERVER_USER ריק!"
+                  else
+                    echo "✅ SERVER_USER: $SERVER_USER"
+                  fi
+                  
+                  if [ -z "$SERVER_PEM" ]; then
+                    echo "❌ SERVER_PEM ריק!"
+                  else
+                    echo "✅ SERVER_PEM: ${#SERVER_PEM} תווים"
+                  fi
+                  echo ""
+                  
+                  # יצירת תיקיית SSH
+                  mkdir -p ~/.ssh
+                  echo "📁 תיקיית SSH נוצרה"
+                  echo ""
+                  
+                  # יצירת ה-private key
+                  printf '%s\n' "$SERVER_PEM" > ~/.ssh/server_key.pem
+                  chmod 600 ~/.ssh/server_key.pem
+                  echo "🔑 Private key נוצר"
+                  echo ""
+                  
+                  # בדיקת ה-private key
+                  echo "🔍 PRIVATE KEY ANALYSIS:"
+                  echo "File size: $(wc -c < ~/.ssh/server_key.pem) bytes"
+                  echo "Line count: $(wc -l < ~/.ssh/server_key.pem) lines"
+                  echo ""
+                  
+                  echo "First line:"
+                  head -1 ~/.ssh/server_key.pem
+                  echo ""
+                  
+                  echo "Last line:"
+                  tail -1 ~/.ssh/server_key.pem
+                  echo ""
+                  
+                  echo "File type:"
+                  file ~/.ssh/server_key.pem
+                  echo ""
+                  
+                  # בדיקת פורמט ה-private key
+                  echo "🔍 KEY FORMAT CHECK:"
+                  if grep -q "BEGIN PRIVATE KEY" ~/.ssh/server_key.pem; then
+                    echo "✅ מכיל 'BEGIN PRIVATE KEY'"
+                  else
+                    echo "❌ לא מכיל 'BEGIN PRIVATE KEY'"
+                  fi
+                  
+                  if grep -q "END PRIVATE KEY" ~/.ssh/server_key.pem; then
+                    echo "✅ מכיל 'END PRIVATE KEY'"
+                  else
+                    echo "❌ לא מכיל 'END PRIVATE KEY'"
+                  fi
+                  echo ""
+                  
+                  # בדיקת תוכן מלא (מוסתר)
+                  echo "📄 FULL KEY CONTENT (first 10 lines):"
+                  head -10 ~/.ssh/server_key.pem
+                  echo ""
+                  echo "�� FULL KEY CONTENT (last 10 lines):"
+                  tail -10 ~/.ssh/server_key.pem
+                  echo ""
+                  
+                  # בדיקת חיבור
+                  echo "🔗 CONNECTION TEST:"
+                  echo "Testing connection to $SERVER_USER@$SERVER_HOST..."
+                  ssh -i ~/.ssh/server_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o BatchMode=yes $SERVER_USER@$SERVER_HOST "echo 'Connection successful'" 2>&1 || echo "Connection failed"
+                  echo ""
+                  
+                  echo "🎯 SUMMARY:"
+                  echo "==========="
+                  if [ -n "$SERVER_HOST" ] && [ -n "$SERVER_USER" ] && [ -n "$SERVER_PEM" ]; then
+                    echo "✅ כל הפרמטרים קיימים"
+                  else
+                    echo "❌ יש פרמטרים חסרים"
+                  fi
+                  
+                  if [ -f ~/.ssh/server_key.pem ]; then
+                    echo "✅ Private key נוצר"
+                  else
+                    echo "❌ Private key לא נוצר"
+                  fi
