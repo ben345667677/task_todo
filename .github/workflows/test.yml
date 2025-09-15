@@ -47,7 +47,7 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/flask-todo-app:latest
           echo "✅ האימג' הועלה ל-Docker Hub!"
 
-          deploy_to_server:
+  deploy_to_server:
             needs: build_and_deploy
             runs-on: ubuntu-latest
             env:
@@ -82,5 +82,7 @@ jobs:
                   echo "📦 Uploading docker-compose.yml..."
                   scp -i ~/.ssh/server_key.pem docker-compose.yml ubuntu@13.220.50.180:/home/ubuntu/task-todo-main/
                   
-
+                  echo "🚀 Running docker-compose..."
+                  ssh -i ~/.ssh/server_key.pem ubuntu@13.220.50.180 "cd /home/ubuntu/task-todo-main && docker-compose up -d --build"
+                  
                   echo "✅ Deployment completed!"
