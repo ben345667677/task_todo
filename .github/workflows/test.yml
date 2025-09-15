@@ -47,21 +47,52 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/flask-todo-app:latest
           echo "✅ האימג' הועלה ל-Docker Hub!"
 
-  deploy_to_server:
-    needs: build_and_deploy
-    runs-on: ubuntu-latest
-    env:
-      SERVER_HOST: ${{ secrets.SERVER_HOST }}
-      SERVER_USER: ${{ secrets.SERVER_USER }}
-      SERVER_PEM: ${{ secrets.SERVER_PEM }}
-    steps:
-      - uses: actions/checkout@v3
-      - name: Deploy to Server
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SERVER_PEM" > ~/.ssh/server_key.pem
-          chmod 600 ~/.ssh/server_key.pem
-          ssh -i ~/.ssh/server_key.pem -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "cd /home/$SERVER_USER/task-todo-main && rm -rf *"
-          scp -i ~/.ssh/server_key.pem docker-compose.yml $SERVER_USER@$SERVER_HOST:/home/$SERVER_USER/task-todo-main/
-          ssh -i ~/.ssh/server_key.pem $SERVER_USER@$SERVER_HOST "cd /home/$SERVER_USER/task-todo-main && docker-compose up -d --build"
-          echo "✅ Deployment הושלם!"
+          deploy_to_server:
+            needs: build_and_deploy
+            runs-on: ubuntu-latest
+            env:
+              SERVER_HOST: ${{ secrets.SERVER_HOST }}
+              SERVER_USER: ${{ secrets.SERVER_USER }}
+              SERVER_PEM: ${{ secrets.SERVER_PEM }}
+            steps:
+              - uses: actions/checkout@v3
+              - name: Deploy to Server
+                run: |
+                  mkdir -p ~/.ssh
+                  
+                  # Debug - בדיקת ה-private key
+                  echo "🔍 Debug Information:"
+                  echo "SERVER_HOST: '$SERVER_HOST'"
+                  echo "SERVER_USER: '$SERVER_USER'"
+                  echo "SERVER_PEM length: ${#SERVER_PEM}"
+                  echo ""
+                  
+                  # יצירת ה-private key עם printf
+                  printf '%s\n' "$SERVER_PEM" > ~/.ssh/server_key.pem
+                  chmod 600 ~/.ssh/server_key.pem
+                  
+                  # בדיקת ה-private key
+                  echo "🔑 Private key (ראשית):"
+                  head -1 ~/.ssh/server_key.pem
+                  echo ""
+                  echo "�� Private key (סוף):"
+                  tail -1 ~/.ssh/server_key.pem
+                  echo ""
+                  echo "📁 Private key info:"
+                  ls -la ~/.ssh/server_key.pem
+                  echo ""
+                  
+                  # בדיקת חיבור
+                  echo "�� בודק חיבור לשרת..."
+                  ssh -i ~/.ssh/server_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 $SERVER_USER@$SERVER_HOST "echo '✅ חיבור הצליח!'" || echo "❌ חיבור נכשל"
+                  
+                  # אם החיבור עובד, ממשיך
+                  echo "🧹 מנקה תיקייה ישנה..."
+                  ssh -i ~/.ssh/server_key.pem -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "cd /home/$SERVER_USER/task-todo-main && rm -rf *"
+                  
+                  echo "📦 מעביר docker-compose.yml..."
+                  scp -i ~/.ssh/server_key.pem docker-compose.yml $SERVER_USER@$SERVER_HOST:/home/$SERVER_USER/task-todo-main/
+                  
+                
+                  
+                  echo "✅ Deployment הושלם!"
