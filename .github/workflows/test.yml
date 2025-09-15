@@ -50,18 +50,12 @@ jobs:
   deploy_to_server:
     needs: build_and_deploy
     runs-on: ubuntu-latest
-    env:
-      SERVER_HOST: ${{ secrets.SERVER_HOST }}
-      SERVER_USER: ${{ secrets.SERVER_USER }}
-      SERVER_PEM: ${{ secrets.SERVER_PEM }}
     steps:
       - uses: actions/checkout@v3
       - name: Deploy to Server
         run: |
-          echo "SERVER_USER: $SERVER_USER"
-          echo "SERVER_PEM: $SERVER_PEM"
           mkdir -p ~/.ssh
-          printf '%s\n' "$SERVER_PEM" > ~/.ssh/server_key.pem
+          printf '%s\n' "$AWS_PEM" > ~/.ssh/server_key.pem
           chmod 600 ~/.ssh/server_key.pem
           ssh -i ~/.ssh/server_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $SERVER_USER@$SERVER_HOST "cd /home/$SERVER_USER/task-todo-main && rm -rf *"
           scp -i ~/.ssh/server_key.pem docker-compose.yml $SERVER_USER@$SERVER_HOST:/home/$SERVER_USER/task-todo-main/
