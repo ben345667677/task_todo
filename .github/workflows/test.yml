@@ -54,11 +54,12 @@ jobs:
       - uses: actions/checkout@v3
       - name: Deploy to AWS
         run: |
+      - name: Deploy to AWS
+        run: |
+          mkdir -p ~/.ssh
           echo "${{ secrets.AWS_PEM }}" > ~/.ssh/aws_key.pem
           chmod 600 ~/.ssh/aws_key.pem
           ssh -i ~/.ssh/aws_key.pem ${{ secrets.AWS_USER }}@${{ secrets.AWS_IP }} "cd /home/${{ secrets.AWS_USER }}/task-todo-main && rm -rf *"
           scp -i ~/.ssh/aws_key.pem docker-compose.yml ${{ secrets.AWS_USER }}@${{ secrets.AWS_IP }}:/home/${{ secrets.AWS_USER }}/task-todo-main/
-          ssh -i ~/.ssh/aws_key.pem ${{ secrets.AWS_USER }}@${{ secrets.AWS_IP }} "cd /home/${{ secrets.AWS_USER }}/task-todo-main && docker-compose up -d --build"
+
           echo "✅ Deployment הושלם!"
-    
-  
