@@ -47,41 +47,21 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/flask-todo-app:latest
           echo "✅ האימג' הועלה ל-Docker Hub!"
 
-  check_parameters:
+  deploy_to_server:
     needs: build_and_deploy
     runs-on: ubuntu-latest
     env:
-      AWS_PEM: ${{ secrets.AWS_PEM }}
-      AWS_USER: ${{ secrets.AWS_USER }}
-      AWS_IP: ${{ secrets.AWS_IP }}
+      SERVER_HOST: ${{ secrets.SERVER_HOST }}
+      SERVER_USER: ${{ secrets.SERVER_USER }}
+      SERVER_PEM: ${{ secrets.SERVER_PEM }}
     steps:
       - uses: actions/checkout@v3
-      - name: Check AWS Parameters
+      - name: Deploy to Server
         run: |
-          echo "�� בדיקת פרמטרי AWS:"
-          echo "========================"
-          echo "AWS_USER: '$AWS_USER'"
-          echo "AWS_IP: '$AWS_IP'"
-          echo "AWS_PEM length: ${#AWS_PEM}"
-          echo ""
-          echo "🔑 AWS_PEM (ראשית):"
-          echo "$AWS_PEM" | head -1
-          echo ""
-          echo "🔑 AWS_PEM (סוף):"
-          echo "$AWS_PEM" | tail -1
-          echo ""
-          echo "📊 סטטיסטיקות:"
-          echo "- AWS_USER ריק: $([ -z "$AWS_USER" ] && echo "כן" || echo "לא")"
-          echo "- AWS_IP ריק: $([ -z "$AWS_IP" ] && echo "כן" || echo "לא")"
-          echo "- AWS_PEM ריק: $([ -z "$AWS_PEM" ] && echo "כן" || echo "לא")"
-          echo ""
-          if [ -z "$AWS_USER" ]; then
-            echo "❌ AWS_USER לא מוגדר!"
-          else
-            echo "✅ AWS_USER מוגדר: $AWS_USER"
-          fi
-          
-          if [ -z "$AWS_IP" ]; then
-            echo "❌ AWS_IP לא מוגדר!"
-          else
-            echo "✅ AWS_IP מוגדר: $AWS_IP"
+          mkdir -p ~/.ssh
+          echo "$SERVER_PEM" > ~/.ssh/server_key.pem
+          chmod 600 ~/.ssh/server_key.pem
+          ssh -i ~/.ssh/server_key.pem -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "cd /home/$SERVER_USER/task-todo-main && rm -rf *"
+          scp -i ~/.ssh/server_key.pem docker-compose.yml $SERVER_USER@$SERVER_HOST:/home/$SERVER_USER/task-todo-main/
+          ssh -i ~/.ssh/server_key.pem $SERVER_USER@$SERVER_HOST "cd /home/$SERVER_USER/task-todo-main && docker-compose up -d --build"
+          echo "✅ Deployment הושלם!"
