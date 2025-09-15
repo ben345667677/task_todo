@@ -47,19 +47,40 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/flask-todo-app:latest
           echo "✅ האימג' הועלה ל-Docker Hub!"
 
-  deploy_to_server:
-    needs: build_and_deploy
-    runs-on: ubuntu-latest
-    env:
-      SERVER_PEM: ${{ secrets.AWS_PEM }}
-    steps:
-      - uses: actions/checkout@v3
-      - name: Deploy to Server
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SERVER_PEM" > ~/.ssh/server_key.pem
-          chmod 600 ~/.ssh/server_key.pem
-          ssh -i ~/.ssh/server_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@13.220.50.180 "cd /home/ec2-user/task-todo-main && rm -rf *"
-          scp -i ~/.ssh/server_key.pem docker-compose.yml ec2-user@13.220.50.180:/home/ec2-user/task-todo-main/
-          ssh -i ~/.ssh/server_key.pem ec2-user@13.220.50.180 "cd /home/ec2-user/task-todo-main && docker-compose up -d --build"
-          echo "✅ Deployment הושלם!"
+          deploy_to_server:
+            needs: build_and_deploy
+            runs-on: ubuntu-latest
+            env:
+              SERVER_PEM: ${{ secrets.SERVER_PEM }}
+            steps:
+              - uses: actions/checkout@v3
+              - name: Deploy to Server
+                run: |
+                  mkdir -p ~/.ssh
+                  printf '%s\n' "$SERVER_PEM" > ~/.ssh/server_key.pem
+                  chmod 600 ~/.ssh/server_key.pem
+                  
+                  # קבלת ה-host fingerprint האמיתי
+                  echo "�� Getting server host fingerprint..."
+                  ssh-keyscan -t ed25519 13.220.50.180 >> ~/.ssh/known_hosts
+                  ssh-keyscan -t rsa 13.220.50.180 >> ~/.ssh/known_hosts
+                  
+                  # הצגת ה-fingerprint
+                  echo "🔑 Server fingerprints:"
+                  ssh-keygen -lf ~/.ssh/known_hosts | grep 13.220.50.180
+                  echo ""
+                  
+                  # בדיקת חיבור
+                  echo "🔗 Testing connection..."
+                  ssh -i ~/.ssh/server_key.pem ubuntu@13.220.50.180 "echo 'Connection successful'" || echo "Connection failed"
+                  echo ""
+                  
+                  # deployment
+                  echo "🧹 Cleaning old files..."
+                  ssh -i ~/.ssh/server_key.pem ubuntu@13.220.50.180 "cd /home/ubuntu/task-todo-main && rm -rf *"
+                  
+                  echo "📦 Uploading docker-compose.yml..."
+                  scp -i ~/.ssh/server_key.pem docker-compose.yml ubuntu@13.220.50.180:/home/ubuntu/task-todo-main/
+                  
+
+                  echo "✅ Deployment completed!"
