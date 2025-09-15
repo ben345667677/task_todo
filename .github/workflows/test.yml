@@ -58,6 +58,8 @@ jobs:
       - uses: actions/checkout@v3
       - name: Deploy to Server
         run: |
+          echo "SERVER_USER: $SERVER_USER"
+          echo "SERVER_PEM: $SERVER_PEM"
           mkdir -p ~/.ssh
           printf '%s\n' "$SERVER_PEM" > ~/.ssh/server_key.pem
           chmod 600 ~/.ssh/server_key.pem
